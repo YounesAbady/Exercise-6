@@ -1,263 +1,86 @@
 ﻿@page
 @model IndexModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    var requestToken = Antiforgery.GetAndStoreTokens(HttpContext).RequestToken;
+}
+<input id="RequestVerificationToken" type="hidden" value="@requestToken" />
+
 <script defer src="https://unpkg.com/alpinejs@3.10.3/dist/cdn.min.js"></script>
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-    window.setInterval(() => {
-        const elem = document.getElementById("autoScroll");
-        elem.scrollTop = elem.scrollHeight;
-    }, 5000);
 
-    var options = {
-        animation: true,
-        delay: 5000
-    };
-    function toast() {
-        var element = document.getElementById("liveToast");
-        var toastElement = new bootstrap.Toast(element, options);
-        toastElement.show();
-    }
-    async function listCategories() {
-        const response = await fetch('https://localhost:7018/api/list-categories', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-            .then(res => { return res })
-        if (response.ok)
-            return response.json();
-    }
-    async function listRecipes() {
-        const response = await fetch('https://localhost:7018/api/list-recipes/', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-            .then(res => { return res })
-        if (response.ok)
-            return response.json();
-    }
-    async function createCategory(category) {
-        var url = "https://localhost:7018/api/add-category/"
-        url = url + category
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                category: category
-            })
-        })
-            .then(res => {
-                return res
-            })
-        if (response.ok) { return true }
-        else { return false }
-
-    }
-    async function deleteCategory(category) {
-        var url = "https://localhost:7018/api/delete-category/"
-        url = url + category
-        const response = await fetch(url, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                category: category
-            })
-        })
-            .then(res => { return res })
-        if (response.ok)
-            return true;
-        else
-            return false;
-    }
-
-    async function editCategory(position, newCategory) {
-        var url = "https://localhost:7018/api/update-category/"
-        url = url + position + "/" + newCategory
-        const response = await fetch(url, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                newCategory: newCategory
-            })
-        })
-            .then(res => { return res })
-        if (response.ok)
-            return true;
-        else
-            return false;
-    }
-    async function createRecipe(recipe) {
-        var url = "https://localhost:7018/api/add-recipe/"
-        url = url + JSON.stringify(recipe)
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                jsonRecipe: recipe
-            })
-        })
-            .then(res => { return res })
-        if (response.ok)
-            return true;
-        else
-            return false;
-    }
-    function adjustRecipe(chosenRecipe, ing, ins) {
-        ing = ing.trim();
-        ins = ins.trim();
-        chosenRecipe.Ingredients = ing.split('\n');
-        chosenRecipe.Instructions = ins.split('\n');
-        return chosenRecipe;
-    }
-    async function deleteRecipe(id) {
-        var url = "https://localhost:7018/api/delete-recipe/"
-        url = url + id
-        const response = await fetch(url, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: {
-                id: id
-            }
-        })
-            .then(res => { return res })
-        if (response.ok)
-            return true;
-        else
-            return false;
-    }
-    async function updateRecipe(jsonRecipe, id) {
-        var url = "https://localhost:7018/api/update-recipe/"
-        url = url + JSON.stringify(jsonRecipe) + "/" + id
-        const response = await fetch(url, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                jsonRecipe: jsonRecipe
-            })
-        })
-            .then(res => { return res })
-        if (response.ok)
-            return true;
-        else
-            return false;
-    }
-    function adjust(chosenRecipe) {
-        chosenRecipe.ingredients[0] = chosenRecipe.ingredients[0].trim();
-        chosenRecipe.instructions[0] = chosenRecipe.instructions[0].trim();
-        let ing = chosenRecipe.ingredients.toString();
-        let ins = chosenRecipe.instructions.toString();
-        chosenRecipe.Ingredients = ing.split(',');
-        chosenRecipe.Instructions = ins.split(',');
-        chosenRecipe.Title = chosenRecipe.title;
-        chosenRecipe.Categories = chosenRecipe.categories;
-        return chosenRecipe;
-    }
-    function sweetDelete(trigger) {
-        if (trigger) {
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "You won't be able to revert this!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Yes, delete it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    Swal.fire(
-                        'Good to go!',
-                        'You can delete it now!.',
-                        'success'
-                    )
-                    document.getElementById("isWorking").disabled = false;
-                    document.getElementById("isWorkingRecipe").disabled = false;
-                }
-                else {
-                    Swal.fire(
-                        'Maybe another time!',
-                        'You cant delete it !.',
-                        'warning'
-                    )
-                }
-            })
-        }
-    }
-    function sweetAlert2(trigger, msg) {
-        if (trigger == true) {
-            Swal.fire(
-                'Done!',
-                msg,
-                'success'
-            )
-        } else if (trigger == false) {
-            Swal.fire(
-                'Error!',
-                'Something went wrong!',
-                'error'
-            )
-        }
-    }
-    async function login(user) {
-        var url = 'https://localhost:7018/api/login';
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                user: user
-            })
-        })
-            .then(res => { return res })
-        if (response.ok)
-            return true;
-        else
-            return false;
-    }
-</script>
 <style>
     [x-cloak] {
         display: none;
     }
 </style>
+
 <head>
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="HandheldFriendly" content="true">
 </head>
 
-<div x-data="{ categories: [], recipes: [], expandCategory: false, expandRecipe: false, doneSuccess: null, msg: '', logged: false}">
+<div x-data="{ categories: [], recipes: [], expandCategory: false, expandRecipe: false, doneSuccess: null, msg: '', logged: false , logScreen:true}">
 
-    <div x-data="{ user:{username:'' , password: ''} , expandLogin:true , expandRegister:false }">
+    <div x-show="logScreen" x-data="{ expandLogin:true , expandRegister:false }">
 
         <!--Log in-->
 
-        <div x-show="expandLogin" x-cloak x-transition style="margin-top:200px">
+        <div x-data="{ user: { username:'' , password: '' } }" x-show="expandLogin" x-cloak x-transition style="margin-top:200px">
             <div class="align-content-center col-6 w-25" style="margin:auto;text-align:center;color:#1A2238;">
                 <div class="form-floating form-outline mb-4">
-                    <input x-model="user.username" class="form-control" id="floatingInput" />
+                    <input x-model="user.username" class="form-control" />
                     <label class="form-label" for="floatingInput">Username</label>
                 </div>
                 <div class="form-floating form-outline mb-4">
                     <input x-model="user.password" type="password" class="form-control" />
                     <label class="form-label">Password</label>
                 </div>
-                <button x-on:click="logged=await login(user);" class="btn btn-success">Sign in</button>
+                <button x-on:click="logged=await login(user);logScreen=!logged;fire(logged,'Logged in successfully')" class="btn btn-success">Sign in</button>
+                <script>
+                    function fire(logged, msg) {
+                        if (logged) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: msg,
+                                showConfirmButton: false,
+                                timer: 1500
+                            })
+                        }
+                        else if (logged === false) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Invalid data',
+                                showConfirmButton: false,
+                                timer: 1500
+                            })
+                        }
+                        else {
+
+                        }
+                    }
+                    async function login(user) {
+                        let url = 'https://localhost:7018/api/login/';
+                        url = url + JSON.stringify(user);
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                RequestVerificationToken:
+                                    document.getElementById("RequestVerificationToken").value
+                            },
+                            body: JSON.stringify({
+                                user: user
+                            })
+                        })
+                            .then(res => { return res })
+                        if (response.ok)
+                            return true;
+                        else
+                            return false;
+                    }
+                </script>
                 <br /><br />
                 <div class="text-center">
                     <p style="color:#66FCF1">Not a member? <a x-on:click="expandLogin=false;expandRegister=true;" class="btn btn-outline-primary">Register</a></p>
@@ -267,24 +90,71 @@
 
         <!--Register-->
 
-        <div x-data="{ newUser : { username:'' , password:'' , repeatedPassword :'' }}" x-show="expandRegister" x-cloak x-transition style="margin-top:200px">
-            <div class="align-content-center col-6 w-25" style="margin:auto;text-align:center;color:#1A2238;">
+        <div x-data="{ newUser : { username:'' , password:'' , repeatedPassword :'' } , created:null }" x-show="expandRegister" x-cloak x-transition style="margin-top:200px">
+            <div method="post" class="align-content-center col-6 w-25 needs-validation" style="margin:auto;text-align:center;color:#1A2238;" novalidate>
                 <div class="form-floating form-outline mb-4">
-                    <input x-model="newUser.username" class="form-control" />
+                    <input x-model="newUser.username" class="form-control" required />
                     <label class="form-label">Username</label>
+                    <div class="valid-feedback" style="font-size:large">
+                        Looks good!
+                    </div>
+                    <div class="invalid-feedback" style="font-size:large">
+                        Cant be empty.
+                    </div>
                 </div>
-
                 <div class="form-floating form-outline mb-4">
-                    <input x-model="newUser.password" type="password" class="form-control" />
+                    <input x-model="newUser.password" type="password" class="form-control" required />
                     <label class="form-label">Password</label>
+                    <div class="valid-feedback" style="font-size:large">
+                        Looks good!
+                    </div>
+                    <div class="invalid-feedback" style="font-size:large">
+                        Cant be empty.
+                    </div>
                 </div>
-
                 <div class="form-floating form-outline mb-4">
-                    <input x-model="newUser.repeatedPassword" type="password" class="form-control" />
+                    <input x-model="newUser.repeatedPassword" type="password" class="form-control" required />
                     <label class="form-label">Repeat password</label>
+                    <div class="valid-feedback" style="font-size:large">
+                        Looks good!
+                    </div>
+                    <div class="invalid-feedback" style="font-size:large">
+                        Cant be empty.
+                    </div>
                 </div>
-
-                <button type="submit" class="btn btn-success btn-block mb-3">Sign up</button>
+                <button x-on:click="created=await register(newUser);fire(created,'Created successfully');expandRegister=!created;expandLogin=!expandRegister" type="submit" class="btn btn-success btn-block mb-3">Sign up</button>
+                <script>
+                    async function register(newUser) {
+                        let url = 'https://localhost:7018/api/create-user/';
+                        url = url + JSON.stringify(newUser);
+                        if (newUser.password != newUser.repeatedPassword) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Passwords dont match',
+                                showConfirmButton: false,
+                                timer: 1500
+                            })
+                        }
+                        else {
+                            const response = await fetch(url, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    RequestVerificationToken:
+                                        document.getElementById("RequestVerificationToken").value
+                                },
+                                body: JSON.stringify({
+                                    newUser: newUser
+                                })
+                            })
+                                .then(res => { return res })
+                            if (response.ok)
+                                return true;
+                            else
+                                return false;
+                        }
+                    }
+                </script>
                 <div class="text-center">
                     <p style="color:#66FCF1">Already have an account? <a x-on:click="expandLogin=true;expandRegister=false;" class="btn btn-outline-primary">Sign in</a></p>
                 </div>
@@ -335,6 +205,21 @@
                 <div>
                     <h4 style="color:#C5C6C7;text-align:center;margin-top:15px;font-family:'Square Peg',cursive;">cook what you love</h4>
                     <button x-on:click="recipes = await listRecipes();expandRecipe= !expandRecipe;expandCategory=false" style="background-color:#1F2833;color:#C5C6C7;margin-top:25px;" class="btn">Recipes</button>
+                    <script>
+                        async function listRecipes() {
+                            const response = await fetch('https://localhost:7018/api/list-recipes/', {
+                                method: 'GET',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    RequestVerificationToken:
+                                        document.getElementById("RequestVerificationToken").value
+                                }
+                            })
+                                .then(res => { return res })
+                            if (response.ok)
+                                return response.json();
+                        }
+                    </script>
                 </div>
             </div>
             <div class="col" style="width:400px;height:500px;margin-left:300px;margin-top:25px;border-style:groove;border-color:#66FCF1">
@@ -353,13 +238,28 @@
                 </div>
                 <h4 style="color:#C5C6C7;text-align:center;margin-top:15px;font-family:'Square Peg',cursive;">discover different cultures</h4>
                 <button x-on:click="categories = await listCategories();expandCategory= !expandCategory;expandRecipe=false" style="background-color:#1F2833;color:#C5C6C7;margin-top:25px" class="btn">Categories</button>
+                <script>
+                    async function listCategories() {
+                        const response = await fetch('https://localhost:7018/api/list-categories', {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                RequestVerificationToken:
+                                    document.getElementById("RequestVerificationToken").value
+                            }
+                        })
+                            .then(res => { return res })
+                        if (response.ok)
+                            return response.json();
+                    }
+                </script>
             </div>
         </div>
 
         <!--List Categories-->
 
-        <div x-data="{ expandCreate:false, chosenCategory:'', expandDelete:false, expandEdit:false,position:-1}" x-show="expandCategory" x-cloak x-transition>
-            <div class="row row-cols-1 row-cols-md-4 g-2 text-center" x-init="sweetAlert2(doneSuccess,msg)">
+        <div x-data="{ expandCreate:false, chosenCategory:'', expandDelete:false, expandEdit:false,position:-1,deleted:null}" x-show="expandCategory" x-cloak x-transition>
+            <div class="row row-cols-1 row-cols-md-3 g-2 text-center">
                 <template x-for="(category, index) in categories">
                     <div>
                         <div class="col">
@@ -367,7 +267,7 @@
                                 <div class="card-body">
                                     <h5 x-text="category" class="card-title" style="color:white"></h5>
                                     <a x-on:click="chosenCategory= category ;position=index+1;expandEdit= !expandEdit;expandDelete=false;expandCreate=false" class="btn btn-dark" style="background-color:#1F2833;color:#C5C6C7;margin-top:10px;"><i class="bi bi-pencil-square" style="font-style:normal"> Edit</i></a>
-                                    <a x-on:click="chosenCategory= category ;expandDelete= !expandDelete;expandEdit=false;expandCreate=false;sweetDelete(expandDelete)" class="btn btn-danger" style="color:#C5C6C7;margin-top:10px;"><i class="bi bi-trash" style="font-style:normal"> Delete</i></a>
+                                    <a x-on:click="expandEdit=false;expandCreate=false;deleted=await sweetDeleteCategory(category);expandCategory= !deleted" class="btn btn-danger" style="color:#C5C6C7;margin-top:10px;"><i class="bi bi-trash" style="font-style:normal"> Delete</i></a>
                                 </div>
                             </div>
                         </div>
@@ -377,31 +277,135 @@
 
             <!--Create Category-->
 
-            <button x-on:click="expandCreate = ! expandCreate;expandEdit=false;expandDelete=false;" style="background-color:#252f3e;color:white;margin-top:50px;margin-left:45%" class="btn text-center"><i class="bi bi-plus-circle" style="font-style:normal"> Create Category</i></button>
+            <button x-data="{created :false}" x-on:click="expandCreate = ! expandCreate;expandEdit=false;expandDelete=false;" style="background-color:#252f3e;color:white;margin-top:50px;margin-left:45%" class="btn text-center"><i class="bi bi-plus-circle" style="font-style:normal"> Create Category</i></button>
 
-            <div id="autoScroll" x-show="expandCreate" x-cloak x-transition>
-                <form class="align-content-center col-6 " style="margin:auto;text-align:center;margin-top:50px;color:#1A2238">
-                    <input x-model="chosenCategory" placeholder="Enter category name" type="text" required />
-                    <button x-on:click="doneSuccess=await createCategory(chosenCategory);expandCreate= fasle;expandCategory= false;" class="btn btn-success text-center" style="font-style:normal"> Add</button>
+            <div x-data="{newCategory:''}" id="autoScroll" x-show="expandCreate" x-cloak x-transition>
+                <form class="align-content-center col-6 needs-validation" style="margin:auto;text-align:center;margin-top:50px;color:#1A2238" novalidate>
+                    <input x-model="newCategory" placeholder="Enter category name" type="text" required />
+                    <div class="valid-feedback" style="font-size:large">
+                        Looks good!
+                    </div>
+                    <div class="invalid-feedback" style="font-size:large">
+                        Cant be empty.
+                    </div>
+                    <button type="button" x-on:click="created=await createCategory(newCategory);expandCreate= !created;expandCategory= !created;fire(created,'Created successfully');newCategory=''" class="btn btn-success text-center" style="font-style:normal"> Add</button>
                 </form>
+                <script>
+                    async function createCategory(category) {
+                        var url = "https://localhost:7018/api/add-category/"
+                        url = url + category
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                RequestVerificationToken:
+                                    document.getElementById("RequestVerificationToken").value
+                            },
+                            body: JSON.stringify({
+                                category: category
+                            })
+                        })
+                            .then(res => {
+                                return res
+                            })
+                        if (response.ok) { return true }
+                        else { return false }
+                    }
+                </script>
             </div>
 
             <!--Delete Category-->
 
-            <div x-show="expandDelete" x-cloak x-transition>
-                <form method="post" class="align-content-center col-6 " style="margin:auto;text-align:center;margin-top:50px;color:#1A2238">
-                    <input x-model="chosenCategory" placeholder="Enter category name" type="text" disabled />
-                    <button x-on:click="await deleteCategory(chosenCategory);expandDelete= fasle;expandCategory= false" class="btn btn-danger" style="font-style:normal" id="isWorking" disabled> Delete</button>
-                </form>
-            </div>
+            <script>
+                async function sweetDeleteCategory(category) {
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: "You won't be able to revert this!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Yes, delete it!'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            if (deleteCategory(category)) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Deleted successfully',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                })
+                                return true;
+                            }
+                            else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Not deleted successfully!',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                })
+                                return false;
+                            }
+                        }
+                    })
+                }
+                async function deleteCategory(category) {
+                    var url = "https://localhost:7018/api/delete-category/"
+                    url = url + category
+                    const response = await fetch(url, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            RequestVerificationToken:
+                                document.getElementById("RequestVerificationToken").value
+                        },
+                        body: JSON.stringify({
+                            category: category
+                        })
+                    })
+                        .then(res => { return res })
+                    if (response.ok)
+                        return true;
+                    else
+                        return false;
+                }
+            </script>
 
             <!--Edit Category-->
 
             <div x-show="expandEdit" x-cloak x-transition>
-                <form method="post" class="align-content-center col-6 " style="margin:auto;text-align:center;margin-top:50px;color:#1A2238">
+                <form method="post" class="align-content-center col-6 needs-validation" style="margin:auto;text-align:center;margin-top:50px;color:#1A2238" novalidate>
                     <input x-model="chosenCategory" type="text" required />
+                    <div class="valid-feedback" style="font-size:large">
+                        Looks good!
+                    </div>
+                    <div class="invalid-feedback" style="font-size:large">
+                        Cant be empty.
+                    </div>
                     <button x-on:click="await editCategory(position,chosenCategory);expandEdit= fasle;expandCategory= false" class="btn btn-success" style="font-style:normal"> Edit</button>
                 </form>
+                <script>
+                    async function editCategory(position, newCategory) {
+                        var url = "https://localhost:7018/api/update-category/"
+                        url = url + position + "/" + newCategory
+                        const response = await fetch(url, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                RequestVerificationToken:
+                                    document.getElementById("RequestVerificationToken").value
+                            },
+                            body: JSON.stringify({
+                                newCategory: newCategory
+                            })
+                        })
+                            .then(res => { return res })
+                        if (response.ok)
+                            return true;
+                        else
+                            return false;
+                    }
+                </script>
             </div>
 
         </div>
@@ -437,7 +441,7 @@
                                 </div>
                                 <br>
                                 <a x-on:click="chosenRecipe= recipe ;expandEdit= !expandEdit;expandDelete=false;expandCreate=false;toast()" class="btn btn-dark" style="background-color:#1F2833;color:#C5C6C7;margin-top:10px;font-style:normal"><i class="bi bi-pencil-square" style="font-style:normal"> Edit</i></a>
-                                <a x-on:click="chosenRecipe= recipe ;expandDelete= !expandDelete;expandEdit=false;expandCreate=false;sweetDelete(expandDelete)" id="liveToastBtn" class="btn btn-danger" style="color:#C5C6C7;margin-top:10px;font-style:normal"><i class="bi bi-trash" style="font-style:normal"> Delete</i></a>
+                                <a x-on:click="expandEdit=false;expandCreate=false;sweetDeleteRecipe(recipe.id)" class="btn btn-danger" style="color:#C5C6C7;margin-top:10px;font-style:normal"><i class="bi bi-trash" style="font-style:normal"> Delete</i></a>
                             </div>
                         </div>
                     </div>
@@ -447,74 +451,148 @@
 
             <!--Create Recipe-->
 
-            <div x-show="expandCreate" x-cloak x-transition x-data="{ing:'' , ins:'' }">
-                <form method="post" id="form" class="align-content-center col-6" style="margin:auto;text-align:center;margin-top:50px;color:#66FCF1">
+            <div x-show="expandCreate" x-cloak x-transition x-data="{ing:'' , ins:'' ,created:false}">
+                <form method="post" id="form" class="align-content-center col-6 needs-validation" style="margin:auto;text-align:center;margin-top:50px;color:#66FCF1" novalidate>
                     <div>
                         <div class="row mt-4 col-11 m-auto">
                             <label style="text-align:left">Recipe Title</label>
-                            <input x-model="chosenRecipe.Title" id="title" required>
+                            <input class="form-control" x-model="chosenRecipe.Title" id="title" required>
+                            <div class="valid-feedback" style="font-size:large">
+                                Looks good!
+                            </div>
+                            <div class="invalid-feedback" style="font-size:large">
+                                Cant be empty.
+                            </div>
                         </div>
                         <div class="row mt-4 col-11 m-auto">
                             <label style="text-align:left">Ingredients</label>
-                            <textarea x-model="ing" id="ingredients" placeholder="After every ingredient press enter for new line." rows="5" cols="30" required></textarea>
+                            <textarea class="form-control resize" x-model="ing" id="ingredients" placeholder="After every ingredient press enter for new line." rows="5" cols="30" required></textarea>
+                            <div class="valid-feedback" style="font-size:large">
+                                Looks good!
+                            </div>
+                            <div class="invalid-feedback" style="font-size:large">
+                                Cant be empty.
+                            </div>
                         </div>
                         <div class="row mt-4 col-11 m-auto">
                             <label style="text-align:left">Instructions</label>
-                            <textarea x-model="ins" id="instructions" placeholder="After every instructions press enter for new line." rows="5" cols="30" required></textarea>
+                            <textarea class="form-control resize" x-model="ins" id="instructions" placeholder="After every instructions press enter for new line." rows="5" cols="30" required></textarea>
+                            <div class="valid-feedback" style="font-size:large">
+                                Looks good!
+                            </div>
+                            <div class="invalid-feedback" style="font-size:large">
+                                Cant be empty.
+                            </div>
                         </div>
                         <div class="row mt-4 col-11 m-auto">
                             <form method="post">
                                 <label style="text-align:left">Choose one or more category</label>
                                 <br>
-                                <select x-init="categories = await listCategories()" x-model="chosenRecipe.Categories" id="categories" multiple style="color:black" required>
+                                <select class="form-control" x-init="categories = await listCategories()" x-model="chosenRecipe.Categories" id="categories" multiple style="color:black" required>
                                     <template x-for="cat in categories">
                                         <option x-model="cat" value="cat" x-text="cat"></option>
                                     </template>
                                 </select>
                                 <p style="font-weight:bold">Hold down the Ctrl (windows) or Command (Mac) button to select multiple options.</p>
+                                <div class="valid-feedback" style="font-size:large">
+                                    Looks good!
+                                </div>
+                                <div class="invalid-feedback" style="font-size:large">
+                                    Cant be empty.
+                                </div>
                             </form>
                         </div>
-                        <button x-on:click="chosenRecipe= adjustRecipe(chosenRecipe,ing,ins);await createRecipe(chosenRecipe);expandRecipe=false" type="submit" class="btn btn-success"><i class="bi bi-plus-circle-fill" style="font-style:normal"> Create Recipe</i></button>
+                        <button x-on:click="chosenRecipe= adjustRecipe(chosenRecipe,ing,ins);created=await createRecipe(chosenRecipe);expandRecipe=!created" type="submit" class="btn btn-success"><i class="bi bi-plus-circle-fill" style="font-style:normal"> Create Recipe</i></button>
                         <br><br>
                     </div>
                 </form>
+                <script>
+                    async function createRecipe(recipe) {
+                        var url = "https://localhost:7018/api/add-recipe/"
+                        url = url + JSON.stringify(recipe)
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                RequestVerificationToken:
+                                    document.getElementById("RequestVerificationToken").value
+                            },
+                            body: JSON.stringify({
+                                jsonRecipe: recipe
+                            })
+                        })
+                            .then(res => { return res })
+                        if (response.ok)
+                            return true;
+                        else
+                            return false;
+                    }
+                    function adjustRecipe(chosenRecipe, ing, ins) {
+                        ing = ing.trim();
+                        ins = ins.trim();
+                        chosenRecipe.Ingredients = ing.split('\n');
+                        chosenRecipe.Instructions = ins.split('\n');
+                        return chosenRecipe;
+                    }
+                </script>
             </div>
 
             <!--Delete Recipe-->
 
-            <div x-show="expandDelete" x-cloak x-transition>
-                <form method="post" class="align-content-center col-6 " style="margin:auto;text-align:center;margin-top:50px;color:#66FCF1">
-                    <div>
-                        <div class="row mt-4 col-11 m-auto">
-                            <label style="text-align:left">Recipe Title</label>
-                            <input x-model="chosenRecipe.title" disabled>
-                        </div>
-                        <div class="row mt-4 col-11 m-auto">
-                            <label style="text-align:left">Ingredients</label>
-                            <template x-for="ing in chosenRecipe.ingredients">
-                                <input x-model="ing" disabled>
-                                <br>
-                            </template>
-                        </div>
-                        <div class="row mt-4 col-11 m-auto">
-                            <label style="text-align:left">Instructions</label>
-                            <template x-for="ins in chosenRecipe.instructions">
-                                <input x-model="ins" disabled>
-                                <br>
-                            </template>
-                        </div>
-                        <div class="row mt-4 col-11 m-auto">
-                            <label style="text-align:left">Categories</label>
-                            <template x-for="cat in chosenRecipe.categories">
-                                <input x-model="cat" disabled>
-                                <br>
-                            </template>
-                        </div>
-                        <br>
-                        <button x-on:click="await deleteRecipe(chosenRecipe.id);expandDelete= fasle;expandRecipe= false" class="btn btn-danger" id="isWorkingRecipe" style="font-style:normal" disabled> Delete</button>
-                    </div>
-                </form>
-            </div>
+            <script>
+                function sweetDeleteRecipe(id) {
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: "You won't be able to revert this!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Yes, delete it!'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            if (deleteRecipe(id)) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Deleted successfully',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                })
+                                return true;
+                            }
+                            else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'not deleted successfully!',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                })
+                                return false;
+                            }
+                        }
+                    })
+                }
+                async function deleteRecipe(id) {
+                    var url = "https://localhost:7018/api/delete-recipe/"
+                    url = url + id
+                    const response = await fetch(url, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            RequestVerificationToken:
+                                document.getElementById("RequestVerificationToken").value
+                        },
+                        body: {
+                            id: id
+                        }
+                    })
+                        .then(res => { return res })
+                    if (response.ok)
+                        return true;
+                    else
+                        return false;
+                }
+            </script>
 
             <!--Update Recipe-->
             <!--Note to User-->
@@ -530,47 +608,108 @@
                         Hello, Chief! separate between ingredients / instructions with a ( , )
                     </div>
                 </div>
+                <script>
+                    var options = {
+                        animation: true,
+                        delay: 5000
+                    };
+                    function toast() {
+                        var element = document.getElementById("liveToast");
+                        var toastElement = new bootstrap.Toast(element, options);
+                        toastElement.show();
+                    }
+                </script>
             </div>
 
-            <div x-show="expandEdit" x-cloak x-transition>
-                <form method="post" class="align-content-center col-6 " style="margin:auto;text-align:center;margin-top:50px;color:#66FCF1">
+            <div x-show="expandEdit" x-cloak x-transition x-data="{ edited:false }">
+                <form method="post" class="align-content-center col-6 needs-validation" style="margin:auto;text-align:center;margin-top:50px;color:#66FCF1" novalidate>
                     <input x-model="chosenRecipe.id" hidden>
                     <div>
                         <div class="row mt-4 col-11 m-auto">
                             <label style="text-align:left">Recipe Title</label>
-                            <input x-model="chosenRecipe.title" required>
+                            <input x-model="chosenRecipe.title" class="form-control" required>
+                            <div class="valid-feedback" style="font-size:large">
+                                Looks good!
+                            </div>
+                            <div class="invalid-feedback" style="font-size:large">
+                                Cant be empty.
+                            </div>
                         </div>
                         <div class="row mt-4 col-11 m-auto">
                             <label style="text-align:left">Ingredients</label>
-                            <textarea x-model="chosenRecipe.ingredients" placeholder="separate between ingredients with a ," rows="4" cols="30" required></textarea>
+                            <textarea class="form-control resize" x-model="chosenRecipe.ingredients" placeholder="separate between ingredients with a ," rows="5" cols="30" required></textarea>
+                            <div class="valid-feedback" style="font-size:large">
+                                Looks good!
+                            </div>
+                            <div class="invalid-feedback" style="font-size:large">
+                                Cant be empty.
+                            </div>
                         </div>
                         <div class="row mt-4 col-11 m-auto">
                             <label style="text-align:left">Instructions</label>
-                            <textarea x-model="chosenRecipe.instructions" placeholder="separate between instructions with a ," rows="4" cols="30" required></textarea>
-                        </div>
-                        <div class="mt-4" style="font-weight:bold;font-size:medium;color:#66FCF1">
-                            Current Categories:
-                            <template x-for="cat in chosenRecipe.categories">
-                                <p x-text="cat"></p>
-                            </template>
-                            <br>
+                            <textarea class="form-control resize" x-model="chosenRecipe.instructions" placeholder="separate between instructions with a ," rows="5" cols="30" required></textarea>
+                            <div class="valid-feedback" style="font-size:large">
+                                Looks good!
+                            </div>
+                            <div class="invalid-feedback" style="font-size:large">
+                                Cant be empty.
+                            </div>
                         </div>
                         <div class="row mt-4 col-11 m-auto">
                             <form method="post">
                                 <label style="font:bolder;text-align:left" class="fw-bold">Choose one or more category</label>
                                 <br>
-                                <select x-init="categories = await listCategories()" x-model="chosenRecipe.categories" multiple style="color:black" required>
+                                <select class="form-control" x-init="categories = await listCategories()" x-model="chosenRecipe.categories" multiple style="color:black" required>
                                     <template x-for="cat in categories">
                                         <option x-model="cat" value="cat" x-text="cat"></option>
                                     </template>
                                 </select>
                                 <p style="font-weight:bolder">Hold down the Ctrl (windows) or Command (Mac) button to select multiple options.</p>
+                                <div class="valid-feedback" style="font-size:large">
+                                    Looks good!
+                                </div>
+                                <div class="invalid-feedback" style="font-size:large">
+                                    Cant be empty.
+                                </div>
                             </form>
                         </div>
                         <br>
-                        <button x-on:click="chosenRecipe=adjust(chosenRecipe);await updateRecipe(chosenRecipe,chosenRecipe.id);expandEdit= fasle;expandRecipe= false" class="btn btn-success" style="font-style:normal"> Edit</button>
+                        <button x-on:click="chosenRecipe=adjust(chosenRecipe);edited=await updateRecipe(chosenRecipe,chosenRecipe.id);expandEdit= !edited;expandRecipe= !edited" class="btn btn-success" style="font-style:normal"> Edit</button>
                     </div>
                 </form>
+                <script>
+                    async function updateRecipe(jsonRecipe, id) {
+                        var url = "https://localhost:7018/api/update-recipe/"
+                        url = url + JSON.stringify(jsonRecipe) + "/" + id
+                        const response = await fetch(url, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                RequestVerificationToken:
+                                    document.getElementById("RequestVerificationToken").value
+                            },
+                            body: JSON.stringify({
+                                jsonRecipe: jsonRecipe
+                            })
+                        })
+                            .then(res => { return res })
+                        if (response.ok)
+                            return true;
+                        else
+                            return false;
+                    }
+                    function adjust(chosenRecipe) {
+                        chosenRecipe.ingredients[0] = chosenRecipe.ingredients[0].trim();
+                        chosenRecipe.instructions[0] = chosenRecipe.instructions[0].trim();
+                        let ing = chosenRecipe.ingredients.toString();
+                        let ins = chosenRecipe.instructions.toString();
+                        chosenRecipe.Ingredients = ing.split(',');
+                        chosenRecipe.Instructions = ins.split(',');
+                        chosenRecipe.Title = chosenRecipe.title;
+                        chosenRecipe.Categories = chosenRecipe.categories;
+                        return chosenRecipe;
+                    }
+                </script>
             </div>
         </div>
     </div>

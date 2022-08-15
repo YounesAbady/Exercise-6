@@ -1,5 +1,6 @@
 ﻿using Backend.Models;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -14,12 +15,13 @@ namespace Backend.Controllers
         {
             string fileName = RecipeController.PathCombine(Environment.CurrentDirectory, @"\Users.json");
             string jsonString = System.IO.File.ReadAllText(fileName);
-            s_users = JsonSerializer.Deserialize<List<User>>(jsonString);
+            s_users = System.Text.Json.JsonSerializer.Deserialize<List<User>>(jsonString);
         }
         [HttpPost]
-        [Route("api/create-user")]
-        public async Task Register(UserDto newUser)
+        [Route("api/create-user/{jsonUser}")]
+        public async Task Register(string jsonUser)
         {
+            UserDto newUser = JsonConvert.DeserializeObject<UserDto>(jsonUser);
             if (string.IsNullOrEmpty(newUser.Username) || string.IsNullOrEmpty(newUser.Password))
                 throw new InvalidOperationException("Cant be empty");
             else
@@ -30,14 +32,15 @@ namespace Backend.Controllers
                 user.PasswordSalt = passwordSalt;
                 s_users.Add(user);
                 string fileName = RecipeController.PathCombine(Environment.CurrentDirectory, @"\Users.json");
-                string jsonString = JsonSerializer.Serialize(s_users);
+                string jsonString = System.Text.Json.JsonSerializer.Serialize(s_users);
                 System.IO.File.WriteAllText(fileName, jsonString);
             }
         }
         [HttpPost]
-        [Route("api/login")]
-        public async Task<ActionResult> Login(UserDto user)
+        [Route("api/login/{jsonUser}")]
+        public async Task<ActionResult> Login(string jsonUser)
         {
+            UserDto user = JsonConvert.DeserializeObject<UserDto>(jsonUser);
             User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
             if (loggedUser == null)
                 return BadRequest("User not found!");
