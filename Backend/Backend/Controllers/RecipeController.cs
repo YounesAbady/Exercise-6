@@ -6,21 +6,17 @@ namespace Backend.Controllers
 {
     public class RecipeController
     {
+        private static bool s_isLoaded = false;
         private static List<Recipe> s_recipes { get; set; } = new List<Recipe>();
         private static List<string> s_categoriesNames { get; set; } = new List<string>();
-        public RecipeController()
-        {
-            string fileName = PathCombine(Environment.CurrentDirectory, @"\Recipes.json");
-            string jsonString = File.ReadAllText(fileName);
-            s_recipes = JsonSerializer.Deserialize<List<Recipe>>(jsonString);
-            fileName = PathCombine(Environment.CurrentDirectory, @"\Categories.json");
-            jsonString = File.ReadAllText(fileName);
-            s_categoriesNames = JsonSerializer.Deserialize<List<string>>(jsonString);
-        }
         [HttpGet]
         [Route("api/list-recipes")]
         public List<Recipe> ListRecipes()
         {
+            if (!s_isLoaded)
+            {
+                LoadData();
+            }
             if (s_recipes.Count == 0)
                 throw new InvalidOperationException("Cant be empty");
             else
@@ -30,6 +26,10 @@ namespace Backend.Controllers
         [Route("api/list-categories")]
         public List<string> ListCategories()
         {
+            if (!s_isLoaded)
+            {
+                LoadData();
+            }
             if (s_categoriesNames.Count == 0)
                 throw new InvalidOperationException("Cant be empty");
             else
@@ -37,7 +37,7 @@ namespace Backend.Controllers
         }
         [HttpPost]
         [Route("api/add-category/{category}")]
-        public void AddCategory(string category)
+        public async void AddCategory(string category)
         {
             if (string.IsNullOrEmpty(category))
                 throw new InvalidOperationException("Cant be empty");
@@ -46,12 +46,13 @@ namespace Backend.Controllers
                 s_categoriesNames.Add(category);
                 string fileName = PathCombine(Environment.CurrentDirectory, @"\Categories.json");
                 string jsonString = JsonSerializer.Serialize(s_categoriesNames);
-                File.WriteAllText(fileName, jsonString);
+                await File.WriteAllTextAsync(fileName, jsonString);
+                s_isLoaded = false;
             }
         }
         [HttpPost]
         [Route("api/add-recipe/{jsonRecipe}")]
-        public void AddRecipe(string jsonRecipe)
+        public async void AddRecipe(string jsonRecipe)
         {
             Recipe recipe = JsonSerializer.Deserialize<Recipe>(jsonRecipe);
             recipe.Ingredients = recipe.Ingredients.Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
@@ -63,12 +64,13 @@ namespace Backend.Controllers
                 s_recipes.Add(recipe);
                 string fileName = PathCombine(Environment.CurrentDirectory, @"\Recipes.json");
                 string jsonString = JsonSerializer.Serialize(s_recipes);
-                File.WriteAllText(fileName, jsonString);
+                await File.WriteAllTextAsync(fileName, jsonString);
+                s_isLoaded = false;
             }
         }
         [HttpDelete]
         [Route("api/delete-category/{category}")]
-        public void DeleteCategory(string category)
+        public async void DeleteCategory(string category)
         {
             if (string.IsNullOrEmpty(category))
                 throw new InvalidOperationException("Cant be empty");
@@ -82,15 +84,16 @@ namespace Backend.Controllers
                 }
                 string fileName = PathCombine(Environment.CurrentDirectory, @"\Categories.json");
                 string jsonString = JsonSerializer.Serialize(s_categoriesNames);
-                File.WriteAllText(fileName, jsonString);
+                await File.WriteAllTextAsync(fileName, jsonString);
                 fileName = PathCombine(Environment.CurrentDirectory, @"\Recipes.json");
                 jsonString = JsonSerializer.Serialize(s_recipes);
-                File.WriteAllText(fileName, jsonString);
+                await File.WriteAllTextAsync(fileName, jsonString);
+                s_isLoaded = false;
             }
         }
         [HttpPut]
         [Route("api/update-category/{position}/{newCategory}")]
-        public void UpdateCategory(string position, string newCategory)
+        public async void UpdateCategory(string position, string newCategory)
         {
             if (string.IsNullOrEmpty(newCategory))
                 throw new InvalidOperationException("Cant be empty");
@@ -106,15 +109,16 @@ namespace Backend.Controllers
                 s_categoriesNames[int.Parse(position) - 1] = newCategory;
                 string fileName = PathCombine(Environment.CurrentDirectory, @"\Categories.json");
                 string jsonString = JsonSerializer.Serialize(s_categoriesNames);
-                File.WriteAllText(fileName, jsonString);
+                await File.WriteAllTextAsync(fileName, jsonString);
                 fileName = PathCombine(Environment.CurrentDirectory, @"\Recipes.json");
                 jsonString = JsonSerializer.Serialize(s_recipes);
-                File.WriteAllText(fileName, jsonString);
+                await File.WriteAllTextAsync(fileName, jsonString);
+                s_isLoaded = false;
             }
         }
         [HttpDelete]
         [Route("api/delete-recipe/{id}")]
-        public void DeleteRecipe(Guid id)
+        public async void DeleteRecipe(Guid id)
         {
             if (id == Guid.Empty)
                 throw new InvalidOperationException("Cant be empty");
@@ -124,12 +128,13 @@ namespace Backend.Controllers
                 s_recipes.Remove(recipe);
                 string fileName = PathCombine(Environment.CurrentDirectory, @"\Recipes.json");
                 var jsonString = JsonSerializer.Serialize(s_recipes);
-                File.WriteAllText(fileName, jsonString);
+                await File.WriteAllTextAsync(fileName, jsonString);
+                s_isLoaded = false;
             }
         }
         [HttpPut]
         [Route("api/update-recipe/{jsonRecipe}/{id}")]
-        public void UpdateRecipe(string jsonRecipe, Guid id)
+        public async void UpdateRecipe(string jsonRecipe, Guid id)
         {
             if (id == Guid.Empty || string.IsNullOrEmpty(jsonRecipe))
                 throw new InvalidOperationException("Cant be empty");
@@ -139,7 +144,7 @@ namespace Backend.Controllers
                 Recipe newRecipe = JsonSerializer.Deserialize<Recipe>(jsonRecipe);
                 newRecipe.Ingredients = newRecipe.Ingredients.Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
                 newRecipe.Instructions = newRecipe.Instructions.Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
-                if (newRecipe.Ingredients.Count == 0 || newRecipe.Instructions.Count == 0 || newRecipe.Categories.Count == 0 ||string.IsNullOrWhiteSpace(newRecipe.Title))
+                if (newRecipe.Ingredients.Count == 0 || newRecipe.Instructions.Count == 0 || newRecipe.Categories.Count == 0 || string.IsNullOrWhiteSpace(newRecipe.Title))
                     throw new InvalidOperationException("Cant be empty");
                 else
                 {
@@ -149,7 +154,8 @@ namespace Backend.Controllers
                     oldRecipe.Instructions = newRecipe.Instructions;
                     var fileName = PathCombine(Environment.CurrentDirectory, @"\Recipes.json");
                     var jsonString = JsonSerializer.Serialize(s_recipes);
-                    File.WriteAllText(fileName, jsonString);
+                    await File.WriteAllTextAsync(fileName, jsonString);
+                    s_isLoaded = false;
                 }
             }
         }
@@ -157,6 +163,10 @@ namespace Backend.Controllers
         [Route("api/get-recipe/{id}")]
         public Recipe GetRecipe(Guid id)
         {
+            if (!s_isLoaded)
+            {
+                LoadData();
+            }
             if (id == Guid.Empty)
                 throw new InvalidOperationException("Cant be empty");
             else
@@ -173,6 +183,15 @@ namespace Backend.Controllers
                 path2 = path2.TrimStart(Path.AltDirectorySeparatorChar);
             }
             return Path.Combine(path1, path2);
+        }
+        private async void LoadData()
+        {
+            string fileName = PathCombine(Environment.CurrentDirectory, @"\Recipes.json");
+            string jsonString = await File.ReadAllTextAsync(fileName);
+            s_recipes = JsonSerializer.Deserialize<List<Recipe>>(jsonString);
+            fileName = PathCombine(Environment.CurrentDirectory, @"\Categories.json");
+            jsonString = await File.ReadAllTextAsync(fileName);
+            s_categoriesNames = JsonSerializer.Deserialize<List<string>>(jsonString);
         }
     }
 }

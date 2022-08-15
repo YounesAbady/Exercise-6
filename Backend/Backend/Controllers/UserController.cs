@@ -9,18 +9,17 @@ namespace Backend.Controllers
 {
     public class UserController : Controller
     {
+        private static bool s_isLoaded = false;
         public static User user = new User();
         private static List<User> s_users = new List<User>();
-        public UserController()
-        {
-            string fileName = RecipeController.PathCombine(Environment.CurrentDirectory, @"\Users.json");
-            string jsonString = System.IO.File.ReadAllText(fileName);
-            s_users = System.Text.Json.JsonSerializer.Deserialize<List<User>>(jsonString);
-        }
         [HttpPost]
         [Route("api/create-user/{jsonUser}")]
         public async Task Register(string jsonUser)
         {
+            if (!s_isLoaded)
+            {
+                LoadData();
+            }
             UserDto newUser = JsonConvert.DeserializeObject<UserDto>(jsonUser);
             if (string.IsNullOrEmpty(newUser.Username) || string.IsNullOrEmpty(newUser.Password))
                 throw new InvalidOperationException("Cant be empty");
@@ -33,13 +32,18 @@ namespace Backend.Controllers
                 s_users.Add(user);
                 string fileName = RecipeController.PathCombine(Environment.CurrentDirectory, @"\Users.json");
                 string jsonString = System.Text.Json.JsonSerializer.Serialize(s_users);
-                System.IO.File.WriteAllText(fileName, jsonString);
+                await System.IO.File.WriteAllTextAsync(fileName, jsonString);
+                s_isLoaded = false;
             }
         }
         [HttpPost]
         [Route("api/login/{jsonUser}")]
         public async Task<ActionResult> Login(string jsonUser)
         {
+            if (!s_isLoaded)
+            {
+                LoadData();
+            }
             UserDto user = JsonConvert.DeserializeObject<UserDto>(jsonUser);
             User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
             if (loggedUser == null)
@@ -64,6 +68,12 @@ namespace Backend.Controllers
                 var computedHash = hmac.ComputeHash(ASCIIEncoding.UTF8.GetBytes(password));
                 return computedHash.SequenceEqual(passwordHash);
             }
+        }
+        private async void LoadData()
+        {
+            string fileName = RecipeController.PathCombine(Environment.CurrentDirectory, @"\Users.json");
+            string jsonString = await System.IO.File.ReadAllTextAsync(fileName);
+            s_users = System.Text.Json.JsonSerializer.Deserialize<List<User>>(jsonString);
         }
     }
 }

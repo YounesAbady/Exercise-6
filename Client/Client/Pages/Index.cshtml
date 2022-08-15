@@ -292,7 +292,7 @@
                 </form>
                 <script>
                     async function createCategory(category) {
-                        var url = "https://localhost:7018/api/add-category/"
+                        let url = "https://localhost:7018/api/add-category/"
                         url = url + category
                         const response = await fetch(url, {
                             method: 'POST',
@@ -305,11 +305,11 @@
                                 category: category
                             })
                         })
-                            .then(res => {
-                                return res
-                            })
-                        if (response.ok) { return true }
-                        else { return false }
+                            .then(res => { return res })
+                        if (response.ok)
+                            return true;
+                        else
+                            return false;
                     }
                 </script>
             </div>
@@ -350,7 +350,7 @@
                     })
                 }
                 async function deleteCategory(category) {
-                    var url = "https://localhost:7018/api/delete-category/"
+                    let url = "https://localhost:7018/api/delete-category/"
                     url = url + category
                     const response = await fetch(url, {
                         method: 'DELETE',
@@ -386,7 +386,7 @@
                 </form>
                 <script>
                     async function editCategory(position, newCategory) {
-                        var url = "https://localhost:7018/api/update-category/"
+                        let url = "https://localhost:7018/api/update-category/"
                         url = url + position + "/" + newCategory
                         const response = await fetch(url, {
                             method: 'PUT',
@@ -452,11 +452,11 @@
             <!--Create Recipe-->
 
             <div x-show="expandCreate" x-cloak x-transition x-data="{ing:'' , ins:'' ,created:false}">
-                <form method="post" id="form" class="align-content-center col-6 needs-validation" style="margin:auto;text-align:center;margin-top:50px;color:#66FCF1" novalidate>
+                <form method="post" class="align-content-center col-6 needs-validation" style="margin:auto;text-align:center;margin-top:50px;color:#66FCF1" novalidate>
                     <div>
                         <div class="row mt-4 col-11 m-auto">
                             <label style="text-align:left">Recipe Title</label>
-                            <input class="form-control" x-model="chosenRecipe.Title" id="title" required>
+                            <input class="form-control" x-model="chosenRecipe.Title" required>
                             <div class="valid-feedback" style="font-size:large">
                                 Looks good!
                             </div>
@@ -466,7 +466,7 @@
                         </div>
                         <div class="row mt-4 col-11 m-auto">
                             <label style="text-align:left">Ingredients</label>
-                            <textarea class="form-control resize" x-model="ing" id="ingredients" placeholder="After every ingredient press enter for new line." rows="5" cols="30" required></textarea>
+                            <textarea class="form-control resize" x-model="ing" placeholder="After every ingredient press enter for new line." rows="5" cols="30" required></textarea>
                             <div class="valid-feedback" style="font-size:large">
                                 Looks good!
                             </div>
@@ -476,7 +476,7 @@
                         </div>
                         <div class="row mt-4 col-11 m-auto">
                             <label style="text-align:left">Instructions</label>
-                            <textarea class="form-control resize" x-model="ins" id="instructions" placeholder="After every instructions press enter for new line." rows="5" cols="30" required></textarea>
+                            <textarea class="form-control resize" x-model="ins" placeholder="After every instructions press enter for new line." rows="5" cols="30" required></textarea>
                             <div class="valid-feedback" style="font-size:large">
                                 Looks good!
                             </div>
@@ -488,7 +488,7 @@
                             <form method="post">
                                 <label style="text-align:left">Choose one or more category</label>
                                 <br>
-                                <select class="form-control" x-init="categories = await listCategories()" x-model="chosenRecipe.Categories" id="categories" multiple style="color:black" required>
+                                <select class="form-control" x-init="categories = await listCategories()" x-model="chosenRecipe.Categories" multiple style="color:black" required>
                                     <template x-for="cat in categories">
                                         <option x-model="cat" value="cat" x-text="cat"></option>
                                     </template>
@@ -502,13 +502,14 @@
                                 </div>
                             </form>
                         </div>
-                        <button x-on:click="chosenRecipe= adjustRecipe(chosenRecipe,ing,ins);created=await createRecipe(chosenRecipe);expandRecipe=!created" type="submit" class="btn btn-success"><i class="bi bi-plus-circle-fill" style="font-style:normal"> Create Recipe</i></button>
+                        <button x-on:click="chosenRecipe= adjustRecipe(chosenRecipe,ing,ins);created=await createRecipe(chosenRecipe);expandRecipe=!created" class="btn btn-success"><i class="bi bi-plus-circle-fill" style="font-style:normal"> Create Recipe</i></button>
                         <br><br>
                     </div>
                 </form>
+
                 <script>
                     async function createRecipe(recipe) {
-                        var url = "https://localhost:7018/api/add-recipe/"
+                        let url = "https://localhost:7018/api/add-recipe/"
                         url = url + JSON.stringify(recipe)
                         const response = await fetch(url, {
                             method: 'POST',
@@ -535,6 +536,7 @@
                         return chosenRecipe;
                     }
                 </script>
+
             </div>
 
             <!--Delete Recipe-->
@@ -573,7 +575,7 @@
                     })
                 }
                 async function deleteRecipe(id) {
-                    var url = "https://localhost:7018/api/delete-recipe/"
+                    let url = "https://localhost:7018/api/delete-recipe/"
                     url = url + id
                     const response = await fetch(url, {
                         method: 'DELETE',
@@ -614,8 +616,8 @@
                         delay: 5000
                     };
                     function toast() {
-                        var element = document.getElementById("liveToast");
-                        var toastElement = new bootstrap.Toast(element, options);
+                        let element = document.getElementById("liveToast");
+                        let toastElement = new bootstrap.Toast(element, options);
                         toastElement.show();
                     }
                 </script>
@@ -679,7 +681,7 @@
                 </form>
                 <script>
                     async function updateRecipe(jsonRecipe, id) {
-                        var url = "https://localhost:7018/api/update-recipe/"
+                        let url = "https://localhost:7018/api/update-recipe/"
                         url = url + JSON.stringify(jsonRecipe) + "/" + id
                         const response = await fetch(url, {
                             method: 'PUT',
