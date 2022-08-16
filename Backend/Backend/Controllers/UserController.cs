@@ -1,6 +1,9 @@
 ﻿using Backend.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -12,6 +15,11 @@ namespace Backend.Controllers
         private static bool s_isLoaded = false;
         public static User user = new User();
         private static List<User> s_users = new List<User>();
+        private readonly IConfiguration _configuration;
+        public UserController(IConfiguration config)
+        {
+            _configuration = config;
+        }
         [HttpPost]
         [Route("api/create-user/{jsonUser}")]
         public async Task Register(string jsonUser)
@@ -49,7 +57,10 @@ namespace Backend.Controllers
             if (loggedUser == null)
                 return BadRequest("User not found!");
             if (VerifyPassword(user.Password, loggedUser.PasswordHash, loggedUser.PasswordSalt))
-                return Ok(loggedUser);
+            {
+                string token = CreateToken(loggedUser);
+                return Ok(token);
+            }
             else
                 return BadRequest("Wrond password!");
         }
@@ -74,6 +85,22 @@ namespace Backend.Controllers
             string fileName = RecipeController.PathCombine(Environment.CurrentDirectory, @"\Users.json");
             string jsonString = await System.IO.File.ReadAllTextAsync(fileName);
             s_users = System.Text.Json.JsonSerializer.Deserialize<List<User>>(jsonString);
+        }
+        private string CreateToken(User user)
+        {
+            List<Claim> claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier,user.Id.ToString())
+            };
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetSection("Token").Value));
+            var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+            var token = new JwtSecurityToken(
+                claims: claims,
+                expires: DateTime.Now.AddMinutes(30),
+                signingCredentials: cred
+                );
+            var jwt = new JwtSecurityTokenHandler().WriteToken(token);
+            return jwt;
         }
     }
 }

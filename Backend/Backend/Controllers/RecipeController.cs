@@ -1,4 +1,5 @@
 ﻿using Backend.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 
@@ -10,7 +11,7 @@ namespace Backend.Controllers
         private static List<Recipe> s_recipes { get; set; } = new List<Recipe>();
         private static List<string> s_categoriesNames { get; set; } = new List<string>();
         [HttpGet]
-        [Route("api/list-recipes")]
+        [Route("api/list-recipes"), Authorize]
         public List<Recipe> ListRecipes()
         {
             if (!s_isLoaded)
@@ -23,7 +24,7 @@ namespace Backend.Controllers
                 return s_recipes;
         }
         [HttpGet]
-        [Route("api/list-categories")]
+        [Route("api/list-categories"), Authorize]
         public List<string> ListCategories()
         {
             if (!s_isLoaded)
@@ -36,7 +37,7 @@ namespace Backend.Controllers
                 return s_categoriesNames;
         }
         [HttpPost]
-        [Route("api/add-category/{category}")]
+        [Route("api/add-category/{category}"), Authorize]
         public async void AddCategory(string category)
         {
             if (string.IsNullOrEmpty(category))
@@ -51,7 +52,7 @@ namespace Backend.Controllers
             }
         }
         [HttpPost]
-        [Route("api/add-recipe/{jsonRecipe}")]
+        [Route("api/add-recipe/{jsonRecipe}"), Authorize]
         public async void AddRecipe(string jsonRecipe)
         {
             Recipe recipe = JsonSerializer.Deserialize<Recipe>(jsonRecipe);
@@ -69,7 +70,7 @@ namespace Backend.Controllers
             }
         }
         [HttpDelete]
-        [Route("api/delete-category/{category}")]
+        [Route("api/delete-category/{category}"), Authorize]
         public async void DeleteCategory(string category)
         {
             if (string.IsNullOrEmpty(category))
@@ -92,7 +93,7 @@ namespace Backend.Controllers
             }
         }
         [HttpPut]
-        [Route("api/update-category/{position}/{newCategory}")]
+        [Route("api/update-category/{position}/{newCategory}"), Authorize]
         public async void UpdateCategory(string position, string newCategory)
         {
             if (string.IsNullOrEmpty(newCategory))
@@ -117,7 +118,7 @@ namespace Backend.Controllers
             }
         }
         [HttpDelete]
-        [Route("api/delete-recipe/{id}")]
+        [Route("api/delete-recipe/{id}"), Authorize]
         public async void DeleteRecipe(Guid id)
         {
             if (id == Guid.Empty)
@@ -133,7 +134,7 @@ namespace Backend.Controllers
             }
         }
         [HttpPut]
-        [Route("api/update-recipe/{jsonRecipe}/{id}")]
+        [Route("api/update-recipe/{jsonRecipe}/{id}"), Authorize]
         public async void UpdateRecipe(string jsonRecipe, Guid id)
         {
             if (id == Guid.Empty || string.IsNullOrEmpty(jsonRecipe))
@@ -160,7 +161,7 @@ namespace Backend.Controllers
             }
         }
         [HttpGet]
-        [Route("api/get-recipe/{id}")]
+        [Route("api/get-recipe/{id}"), Authorize]
         public Recipe GetRecipe(Guid id)
         {
             if (!s_isLoaded)

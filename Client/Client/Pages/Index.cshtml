@@ -3,6 +3,7 @@
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
     var requestToken = Antiforgery.GetAndStoreTokens(HttpContext).RequestToken;
+    string baseAdress = "https://localhost:7018/api/";
 }
 <input id="RequestVerificationToken" type="hidden" value="@requestToken" />
 
@@ -21,7 +22,7 @@
     <meta name="HandheldFriendly" content="true">
 </head>
 
-<div x-data="{ categories: [], recipes: [], expandCategory: false, expandRecipe: false, doneSuccess: null, msg: '', logged: false , logScreen:true}">
+<div x-data="{ categories: [], recipes: [], expandCategory: false, expandRecipe: false, doneSuccess: null, msg: '', logged: '' , logScreen:true}">
 
     <div x-show="logScreen" x-data="{ expandLogin:true , expandRegister:false }">
 
@@ -61,8 +62,7 @@
                         }
                     }
                     async function login(user) {
-                        let url = 'https://localhost:7018/api/login/';
-                        url = url + JSON.stringify(user);
+                        let url = '@baseAdress' + 'login/' + JSON.stringify(user);
                         const response = await fetch(url, {
                             method: 'POST',
                             headers: {
@@ -76,7 +76,7 @@
                         })
                             .then(res => { return res })
                         if (response.ok)
-                            return true;
+                            return response.text();
                         else
                             return false;
                     }
@@ -125,8 +125,7 @@
                 <button x-on:click="created=await register(newUser);fire(created,'Created successfully');expandRegister=!created;expandLogin=!expandRegister" type="submit" class="btn btn-success btn-block mb-3">Sign up</button>
                 <script>
                     async function register(newUser) {
-                        let url = 'https://localhost:7018/api/create-user/';
-                        url = url + JSON.stringify(newUser);
+                        let url = '@baseAdress' + 'create-user/' + JSON.stringify(newUser);
                         if (newUser.password != newUser.repeatedPassword) {
                             Swal.fire({
                                 icon: 'error',
@@ -204,15 +203,17 @@
                 </div>
                 <div>
                     <h4 style="color:#C5C6C7;text-align:center;margin-top:15px;font-family:'Square Peg',cursive;">cook what you love</h4>
-                    <button x-on:click="recipes = await listRecipes();expandRecipe= !expandRecipe;expandCategory=false" style="background-color:#1F2833;color:#C5C6C7;margin-top:25px;" class="btn">Recipes</button>
+                    <button x-on:click="recipes = await listRecipes(logged);expandRecipe= !expandRecipe;expandCategory=false" style="background-color:#1F2833;color:#C5C6C7;margin-top:25px;" class="btn">Recipes</button>
                     <script>
-                        async function listRecipes() {
-                            const response = await fetch('https://localhost:7018/api/list-recipes/', {
+                        async function listRecipes(token) {
+                            let url = '@baseAdress' + 'list-recipes/';
+                            const response = await fetch(url, {
                                 method: 'GET',
                                 headers: {
                                     'Content-Type': 'application/json',
                                     RequestVerificationToken:
-                                        document.getElementById("RequestVerificationToken").value
+                                        document.getElementById("RequestVerificationToken").value,
+                                    'Authorization': 'Bearer ' + token
                                 }
                             })
                                 .then(res => { return res })
@@ -237,15 +238,17 @@
                     </div>
                 </div>
                 <h4 style="color:#C5C6C7;text-align:center;margin-top:15px;font-family:'Square Peg',cursive;">discover different cultures</h4>
-                <button x-on:click="categories = await listCategories();expandCategory= !expandCategory;expandRecipe=false" style="background-color:#1F2833;color:#C5C6C7;margin-top:25px" class="btn">Categories</button>
+                <button x-on:click="categories = await listCategories(logged);expandCategory= !expandCategory;expandRecipe=false" style="background-color:#1F2833;color:#C5C6C7;margin-top:25px" class="btn">Categories</button>
                 <script>
-                    async function listCategories() {
-                        const response = await fetch('https://localhost:7018/api/list-categories', {
+                    async function listCategories(token) {
+                        let url = '@baseAdress' + 'list-categories';
+                        const response = await fetch(url, {
                             method: 'GET',
                             headers: {
                                 'Content-Type': 'application/json',
                                 RequestVerificationToken:
-                                    document.getElementById("RequestVerificationToken").value
+                                    document.getElementById("RequestVerificationToken").value,
+                                'Authorization': 'Bearer ' + token
                             }
                         })
                             .then(res => { return res })
@@ -267,7 +270,7 @@
                                 <div class="card-body">
                                     <h5 x-text="category" class="card-title" style="color:white"></h5>
                                     <a x-on:click="chosenCategory= category ;position=index+1;expandEdit= !expandEdit;expandDelete=false;expandCreate=false" class="btn btn-dark" style="background-color:#1F2833;color:#C5C6C7;margin-top:10px;"><i class="bi bi-pencil-square" style="font-style:normal"> Edit</i></a>
-                                    <a x-on:click="expandEdit=false;expandCreate=false;deleted=await sweetDeleteCategory(category);expandCategory= !deleted" class="btn btn-danger" style="color:#C5C6C7;margin-top:10px;"><i class="bi bi-trash" style="font-style:normal"> Delete</i></a>
+                                    <a x-on:click="expandEdit=false;expandCreate=false;deleted=await sweetDeleteCategory(category,logged);expandCategory= !deleted" class="btn btn-danger" style="color:#C5C6C7;margin-top:10px;"><i class="bi bi-trash" style="font-style:normal"> Delete</i></a>
                                 </div>
                             </div>
                         </div>
@@ -288,18 +291,18 @@
                     <div class="invalid-feedback" style="font-size:large">
                         Cant be empty.
                     </div>
-                    <button type="button" x-on:click="created=await createCategory(newCategory);expandCreate= !created;expandCategory= !created;fire(created,'Created successfully');newCategory=''" class="btn btn-success text-center" style="font-style:normal"> Add</button>
+                    <button type="button" x-on:click="created=await createCategory(newCategory,logged);expandCreate= !created;expandCategory= !created;fire(created,'Created successfully');newCategory=''" class="btn btn-success text-center" style="font-style:normal"> Add</button>
                 </form>
                 <script>
-                    async function createCategory(category) {
-                        let url = "https://localhost:7018/api/add-category/"
-                        url = url + category
+                    async function createCategory(category, token) {
+                        let url = '@baseAdress' + 'add-category/' + category;
                         const response = await fetch(url, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
                                 RequestVerificationToken:
-                                    document.getElementById("RequestVerificationToken").value
+                                    document.getElementById("RequestVerificationToken").value,
+                                'Authorization': 'Bearer ' + token
                             },
                             body: JSON.stringify({
                                 category: category
@@ -317,7 +320,7 @@
             <!--Delete Category-->
 
             <script>
-                async function sweetDeleteCategory(category) {
+                async function sweetDeleteCategory(category, token) {
                     Swal.fire({
                         title: 'Are you sure?',
                         text: "You won't be able to revert this!",
@@ -328,7 +331,7 @@
                         confirmButtonText: 'Yes, delete it!'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            if (deleteCategory(category)) {
+                            if (deleteCategory(category, token)) {
                                 Swal.fire({
                                     icon: 'success',
                                     title: 'Deleted successfully',
@@ -349,15 +352,15 @@
                         }
                     })
                 }
-                async function deleteCategory(category) {
-                    let url = "https://localhost:7018/api/delete-category/"
-                    url = url + category
+                async function deleteCategory(category, token) {
+                    let url = '@baseAdress' + 'delete-category/' + category;
                     const response = await fetch(url, {
                         method: 'DELETE',
                         headers: {
                             'Content-Type': 'application/json',
                             RequestVerificationToken:
-                                document.getElementById("RequestVerificationToken").value
+                                document.getElementById("RequestVerificationToken").value,
+                            'Authorization': 'Bearer ' + token
                         },
                         body: JSON.stringify({
                             category: category
@@ -382,18 +385,18 @@
                     <div class="invalid-feedback" style="font-size:large">
                         Cant be empty.
                     </div>
-                    <button x-on:click="await editCategory(position,chosenCategory);expandEdit= fasle;expandCategory= false" class="btn btn-success" style="font-style:normal"> Edit</button>
+                    <button x-on:click="await editCategory(position,chosenCategory,logged);expandEdit= fasle;expandCategory= false" class="btn btn-success" style="font-style:normal"> Edit</button>
                 </form>
                 <script>
-                    async function editCategory(position, newCategory) {
-                        let url = "https://localhost:7018/api/update-category/"
-                        url = url + position + "/" + newCategory
+                    async function editCategory(position, newCategory, token) {
+                        let url = '@baseAdress' + 'update-category/' + position + "/" + newCategory;
                         const response = await fetch(url, {
                             method: 'PUT',
                             headers: {
                                 'Content-Type': 'application/json',
                                 RequestVerificationToken:
-                                    document.getElementById("RequestVerificationToken").value
+                                    document.getElementById("RequestVerificationToken").value,
+                                'Authorization': 'Bearer ' + token
                             },
                             body: JSON.stringify({
                                 newCategory: newCategory
@@ -440,14 +443,14 @@
                                     </template>
                                 </div>
                                 <br>
-                                <a x-on:click="chosenRecipe= recipe ;expandEdit= !expandEdit;expandDelete=false;expandCreate=false;toast()" class="btn btn-dark" style="background-color:#1F2833;color:#C5C6C7;margin-top:10px;font-style:normal"><i class="bi bi-pencil-square" style="font-style:normal"> Edit</i></a>
-                                <a x-on:click="expandEdit=false;expandCreate=false;sweetDeleteRecipe(recipe.id)" class="btn btn-danger" style="color:#C5C6C7;margin-top:10px;font-style:normal"><i class="bi bi-trash" style="font-style:normal"> Delete</i></a>
+                                <a x-on:click="chosenRecipe= recipe ;expandEdit= !expandEdit;expandDelete=false;expandCreate=false;toast(expandEdit);categories = await listCategories(logged)" class="btn btn-dark" style="background-color:#1F2833;color:#C5C6C7;margin-top:10px;font-style:normal"><i class="bi bi-pencil-square" style="font-style:normal"> Edit</i></a>
+                                <a x-on:click="expandEdit=false;expandCreate=false;sweetDeleteRecipe(recipe.id,logged)" class="btn btn-danger" style="color:#C5C6C7;margin-top:10px;font-style:normal"><i class="bi bi-trash" style="font-style:normal"> Delete</i></a>
                             </div>
                         </div>
                     </div>
                 </template>
             </div>
-            <button x-on:click="expandCreate = ! expandCreate;expandDelete=false;expandEdit=false" style="background-color:#252f3e;color:white;margin-top:50px;margin-left:45%" class="btn text-center"><i class="bi bi-plus-circle" style="font-style:normal"> Create Recipe</i></button>
+            <button x-on:click="expandCreate = ! expandCreate;expandDelete=false;expandEdit=false;categories = await listCategories(logged)" style="background-color:#252f3e;color:white;margin-top:50px;margin-left:45%" class="btn text-center"><i class="bi bi-plus-circle" style="font-style:normal"> Create Recipe</i></button>
 
             <!--Create Recipe-->
 
@@ -488,7 +491,7 @@
                             <form method="post">
                                 <label style="text-align:left">Choose one or more category</label>
                                 <br>
-                                <select class="form-control" x-init="categories = await listCategories()" x-model="chosenRecipe.Categories" multiple style="color:black" required>
+                                <select class="form-control" x-model="chosenRecipe.Categories" multiple style="color:black" required>
                                     <template x-for="cat in categories">
                                         <option x-model="cat" value="cat" x-text="cat"></option>
                                     </template>
@@ -502,21 +505,21 @@
                                 </div>
                             </form>
                         </div>
-                        <button x-on:click="chosenRecipe= adjustRecipe(chosenRecipe,ing,ins);created=await createRecipe(chosenRecipe);expandRecipe=!created" class="btn btn-success"><i class="bi bi-plus-circle-fill" style="font-style:normal"> Create Recipe</i></button>
+                        <button x-on:click="chosenRecipe= adjustRecipe(chosenRecipe,ing,ins);created=await createRecipe(chosenRecipe,logged);expandRecipe=!created" class="btn btn-success"><i class="bi bi-plus-circle-fill" style="font-style:normal"> Create Recipe</i></button>
                         <br><br>
                     </div>
                 </form>
 
                 <script>
-                    async function createRecipe(recipe) {
-                        let url = "https://localhost:7018/api/add-recipe/"
-                        url = url + JSON.stringify(recipe)
+                    async function createRecipe(recipe, token) {
+                        let url = '@baseAdress' + 'add-recipe/' + JSON.stringify(recipe);
                         const response = await fetch(url, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
                                 RequestVerificationToken:
-                                    document.getElementById("RequestVerificationToken").value
+                                    document.getElementById("RequestVerificationToken").value,
+                                'Authorization': 'Bearer ' + token
                             },
                             body: JSON.stringify({
                                 jsonRecipe: recipe
@@ -542,7 +545,7 @@
             <!--Delete Recipe-->
 
             <script>
-                function sweetDeleteRecipe(id) {
+                function sweetDeleteRecipe(id, token) {
                     Swal.fire({
                         title: 'Are you sure?',
                         text: "You won't be able to revert this!",
@@ -553,7 +556,7 @@
                         confirmButtonText: 'Yes, delete it!'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            if (deleteRecipe(id)) {
+                            if (deleteRecipe(id, token)) {
                                 Swal.fire({
                                     icon: 'success',
                                     title: 'Deleted successfully',
@@ -574,15 +577,15 @@
                         }
                     })
                 }
-                async function deleteRecipe(id) {
-                    let url = "https://localhost:7018/api/delete-recipe/"
-                    url = url + id
+                async function deleteRecipe(id, token) {
+                    let url = '@baseAdress' + 'delete-recipe/' + id;
                     const response = await fetch(url, {
                         method: 'DELETE',
                         headers: {
                             'Content-Type': 'application/json',
                             RequestVerificationToken:
-                                document.getElementById("RequestVerificationToken").value
+                                document.getElementById("RequestVerificationToken").value,
+                            'Authorization': 'Bearer ' + token
                         },
                         body: {
                             id: id
@@ -615,10 +618,12 @@
                         animation: true,
                         delay: 5000
                     };
-                    function toast() {
-                        let element = document.getElementById("liveToast");
-                        let toastElement = new bootstrap.Toast(element, options);
-                        toastElement.show();
+                    function toast(flag) {
+                        if (flag) {
+                            let element = document.getElementById("liveToast");
+                            let toastElement = new bootstrap.Toast(element, options);
+                            toastElement.show();
+                        }
                     }
                 </script>
             </div>
@@ -661,7 +666,7 @@
                             <form method="post">
                                 <label style="font:bolder;text-align:left" class="fw-bold">Choose one or more category</label>
                                 <br>
-                                <select class="form-control" x-init="categories = await listCategories()" x-model="chosenRecipe.categories" multiple style="color:black" required>
+                                <select class="form-control" x-model="chosenRecipe.categories" multiple style="color:black" required>
                                     <template x-for="cat in categories">
                                         <option x-model="cat" value="cat" x-text="cat"></option>
                                     </template>
@@ -676,19 +681,19 @@
                             </form>
                         </div>
                         <br>
-                        <button x-on:click="chosenRecipe=adjust(chosenRecipe);edited=await updateRecipe(chosenRecipe,chosenRecipe.id);expandEdit= !edited;expandRecipe= !edited" class="btn btn-success" style="font-style:normal"> Edit</button>
+                        <button x-on:click="chosenRecipe=adjust(chosenRecipe);edited=await updateRecipe(chosenRecipe,chosenRecipe.id,logged);expandEdit= !edited;expandRecipe= !edited" class="btn btn-success" style="font-style:normal"> Edit</button>
                     </div>
                 </form>
                 <script>
-                    async function updateRecipe(jsonRecipe, id) {
-                        let url = "https://localhost:7018/api/update-recipe/"
-                        url = url + JSON.stringify(jsonRecipe) + "/" + id
+                    async function updateRecipe(jsonRecipe, id, token) {
+                        let url = '@baseAdress' + 'update-recipe/' + JSON.stringify(jsonRecipe) + "/" + id;
                         const response = await fetch(url, {
                             method: 'PUT',
                             headers: {
                                 'Content-Type': 'application/json',
                                 RequestVerificationToken:
-                                    document.getElementById("RequestVerificationToken").value
+                                    document.getElementById("RequestVerificationToken").value,
+                                'Authorization': 'Bearer ' + token
                             },
                             body: JSON.stringify({
                                 jsonRecipe: jsonRecipe
