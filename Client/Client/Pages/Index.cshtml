@@ -1,9 +1,12 @@
 ﻿@page
 @model IndexModel
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration config
 @{
+
     var requestToken = Antiforgery.GetAndStoreTokens(HttpContext).RequestToken;
-    string baseAdress = "https://localhost:7018/api/";
+    string baseAdress = config.GetSection("BaseAddress").Value;
 }
 <input id="RequestVerificationToken" type="hidden" value="@requestToken" />
 
@@ -22,7 +25,8 @@
     <meta name="HandheldFriendly" content="true">
 </head>
 
-<div x-data="{ categories: [], recipes: [], expandCategory: false, expandRecipe: false, doneSuccess: null, msg: '', logged: '' , logScreen:true}">
+<div x-data="{ categories: [], recipes: [], expandCategory: false, expandRecipe: false, logged: '' , logScreen:true}" x-effect="categories = await listCategories(logged);recipes = await listRecipes(logged);">
+
 
     <div x-show="logScreen" x-data="{ expandLogin:true , expandRegister:false }">
 
@@ -38,7 +42,7 @@
                     <input x-model="user.password" type="password" class="form-control" />
                     <label class="form-label">Password</label>
                 </div>
-                <button x-on:click="logged=await login(user);logScreen=!logged;fire(logged,'Logged in successfully')" class="btn btn-success">Sign in</button>
+                <button x-on:click="logged=await login(user);logScreen=!logged;fire(logged,'Logged in successfully')" class="btn btn-success"><i class="bi bi-door-open-fill"> Sign in</i></button>
                 <script>
                     function fire(logged, msg) {
                         if (logged) {
@@ -91,7 +95,7 @@
         <!--Register-->
 
         <div x-data="{ newUser : { username:'' , password:'' , repeatedPassword :'' } , created:null }" x-show="expandRegister" x-cloak x-transition style="margin-top:200px">
-            <div method="post" class="align-content-center col-6 w-25 needs-validation" style="margin:auto;text-align:center;color:#1A2238;" novalidate>
+            <form method="post" class="align-content-center col-6 w-25 needs-validation" style="margin:auto;text-align:center;color:#1A2238;" novalidate>
                 <div class="form-floating form-outline mb-4">
                     <input x-model="newUser.username" class="form-control" required />
                     <label class="form-label">Username</label>
@@ -122,7 +126,7 @@
                         Cant be empty.
                     </div>
                 </div>
-                <button x-on:click="created=await register(newUser);fire(created,'Created successfully');expandRegister=!created;expandLogin=!expandRegister" type="submit" class="btn btn-success btn-block mb-3">Sign up</button>
+                <button x-on:click="created=await register(newUser);fire(created,'Created successfully');expandRegister=!created;expandRegister=!created;expandLogin=!expandRegister" type="button" class="btn btn-success btn-block mb-3 isWorking"><i class="bi bi-patch-plus"> Sign up</i></button>
                 <script>
                     async function register(newUser) {
                         let url = '@baseAdress' + 'create-user/' + JSON.stringify(newUser);
@@ -157,7 +161,7 @@
                 <div class="text-center">
                     <p style="color:#66FCF1">Already have an account? <a x-on:click="expandLogin=true;expandRegister=false;" class="btn btn-outline-primary">Sign in</a></p>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
 
@@ -261,7 +265,7 @@
 
         <!--List Categories-->
 
-        <div x-data="{ expandCreate:false, chosenCategory:'', expandDelete:false, expandEdit:false,position:-1,deleted:null}" x-show="expandCategory" x-cloak x-transition>
+        <div x-data="{ expandCreate:false, chosenCategory:'', expandDelete:false, expandEdit:false,position:-1,deleted:null,newCategory:'' }" x-show="expandCategory" x-cloak x-transition>
             <div class="row row-cols-1 row-cols-md-3 g-2 text-center">
                 <template x-for="(category, index) in categories">
                     <div>
@@ -270,7 +274,7 @@
                                 <div class="card-body">
                                     <h5 x-text="category" class="card-title" style="color:white"></h5>
                                     <a x-on:click="chosenCategory= category ;position=index+1;expandEdit= !expandEdit;expandDelete=false;expandCreate=false" class="btn btn-dark" style="background-color:#1F2833;color:#C5C6C7;margin-top:10px;"><i class="bi bi-pencil-square" style="font-style:normal"> Edit</i></a>
-                                    <a x-on:click="expandEdit=false;expandCreate=false;deleted=await sweetDeleteCategory(category,logged);expandCategory= !deleted" class="btn btn-danger" style="color:#C5C6C7;margin-top:10px;"><i class="bi bi-trash" style="font-style:normal"> Delete</i></a>
+                                    <a x-on:click="deleted=await sweetDeleteCategory(category,logged);expandEdit=false;expandCreate=false;categories=await listCategories(logged)" class="btn btn-danger" style="color:white;margin-top:10px;"><i class="bi bi-trash" style="font-style:normal"> Delete</i></a>
                                 </div>
                             </div>
                         </div>
@@ -280,9 +284,9 @@
 
             <!--Create Category-->
 
-            <button x-data="{created :false}" x-on:click="expandCreate = ! expandCreate;expandEdit=false;expandDelete=false;" style="background-color:#252f3e;color:white;margin-top:50px;margin-left:45%" class="btn text-center"><i class="bi bi-plus-circle" style="font-style:normal"> Create Category</i></button>
+            <button x-data="{created :false}" x-on:click="expandCreate = ! expandCreate;expandEdit=false;expandDelete=false;newCategory=''" style="background-color:#252f3e;color:white;margin-top:50px;margin-left:45%" class="btn text-center"><i class="bi bi-plus-circle" style="font-style:normal"> Create Category</i></button>
 
-            <div x-data="{newCategory:''}" id="autoScroll" x-show="expandCreate" x-cloak x-transition>
+            <div x-show="expandCreate" x-cloak x-transition>
                 <form class="align-content-center col-6 needs-validation" style="margin:auto;text-align:center;margin-top:50px;color:#1A2238" novalidate>
                     <input x-model="newCategory" placeholder="Enter category name" type="text" required />
                     <div class="valid-feedback" style="font-size:large">
@@ -291,7 +295,7 @@
                     <div class="invalid-feedback" style="font-size:large">
                         Cant be empty.
                     </div>
-                    <button type="button" x-on:click="created=await createCategory(newCategory,logged);expandCreate= !created;expandCategory= !created;fire(created,'Created successfully');newCategory=''" class="btn btn-success text-center" style="font-style:normal"> Add</button>
+                    <button type="button" x-on:click="created=await createCategory(newCategory,logged);expandCreate= !created;fire(created,'Created successfully');newCategory='';categories=await listCategories(logged);" class="btn btn-success text-center isWorking" style="font-style:normal"> Add</button>
                 </form>
                 <script>
                     async function createCategory(category, token) {
@@ -350,6 +354,8 @@
                                 return false;
                             }
                         }
+                        else
+                            return false;
                     })
                 }
                 async function deleteCategory(category, token) {
@@ -385,7 +391,7 @@
                     <div class="invalid-feedback" style="font-size:large">
                         Cant be empty.
                     </div>
-                    <button x-on:click="await editCategory(position,chosenCategory,logged);expandEdit= fasle;expandCategory= false" class="btn btn-success" style="font-style:normal"> Edit</button>
+                    <button x-on:click="await editCategory(position,chosenCategory,logged);expandEdit= fasle;expandCategory= false" class="btn btn-success isWorking" style="font-style:normal"> Edit</button>
                 </form>
                 <script>
                     async function editCategory(position, newCategory, token) {
@@ -415,7 +421,7 @@
 
         <!--List Recipes-->
 
-        <div x-data="{ expandCreate:false, chosenRecipe:{Title:'', Ingredients:[], Instructions:[], Categories:[]}, expandDelete:false, expandEdit:false }" x-show="expandRecipe" x-cloak x-transition>
+        <div x-data="{ expandCreate:false, chosenRecipe:{Title:'', Ingredients:[], Instructions:[], Categories:[]}, expandDelete:false, expandEdit:false, ing:'' , ins:'' }" x-show="expandRecipe" x-cloak x-transition>
             <div class="row row-cols-1 row-cols-md-4 g-2 text-center">
                 <template x-for="recipe in recipes">
                     <div class="col">
@@ -443,18 +449,18 @@
                                     </template>
                                 </div>
                                 <br>
-                                <a x-on:click="chosenRecipe= recipe ;expandEdit= !expandEdit;expandDelete=false;expandCreate=false;toast(expandEdit);categories = await listCategories(logged)" class="btn btn-dark" style="background-color:#1F2833;color:#C5C6C7;margin-top:10px;font-style:normal"><i class="bi bi-pencil-square" style="font-style:normal"> Edit</i></a>
-                                <a x-on:click="expandEdit=false;expandCreate=false;sweetDeleteRecipe(recipe.id,logged)" class="btn btn-danger" style="color:#C5C6C7;margin-top:10px;font-style:normal"><i class="bi bi-trash" style="font-style:normal"> Delete</i></a>
+                                <a x-on:click="chosenRecipe.title=recipe.title;chosenRecipe.id=recipe.id;chosenRecipe.ingredients=recipe.ingredients;chosenRecipe.instructions=recipe.instructions;chosenRecipe.categories=recipe.categories;expandEdit= !expandEdit;expandDelete=false;expandCreate=false;toast(expandEdit);categories = await listCategories(logged)" class="btn btn-dark" style="background-color:#1F2833;color:#C5C6C7;margin-top:10px;font-style:normal"><i class="bi bi-pencil-square" style="font-style:normal"> Edit</i></a>
+                                <a x-on:click="expandEdit=false;expandCreate=false;sweetDeleteRecipe(recipe.id,logged)" class="btn btn-danger" style="color:white;margin-top:10px;font-style:normal"><i class="bi bi-trash" style="font-style:normal"> Delete</i></a>
                             </div>
                         </div>
                     </div>
                 </template>
             </div>
-            <button x-on:click="expandCreate = ! expandCreate;expandDelete=false;expandEdit=false;categories = await listCategories(logged)" style="background-color:#252f3e;color:white;margin-top:50px;margin-left:45%" class="btn text-center"><i class="bi bi-plus-circle" style="font-style:normal"> Create Recipe</i></button>
+            <button x-on:click="expandCreate = ! expandCreate;expandDelete=false;expandEdit=false;categories = await listCategories(logged);[chosenRecipe,ing,ins]=clear(chosenRecipe,ing,ins)" style="background-color:#252f3e;color:white;margin-top:50px;margin-left:45%" class="btn text-center"><i class="bi bi-plus-circle" style="font-style:normal"> Create Recipe</i></button>
 
             <!--Create Recipe-->
 
-            <div x-show="expandCreate" x-cloak x-transition x-data="{ing:'' , ins:'' ,created:false}">
+            <div x-show="expandCreate" x-cloak x-transition x-data="{created:false}">
                 <form method="post" class="align-content-center col-6 needs-validation" style="margin:auto;text-align:center;margin-top:50px;color:#66FCF1" novalidate>
                     <div>
                         <div class="row mt-4 col-11 m-auto">
@@ -496,16 +502,16 @@
                                         <option x-model="cat" value="cat" x-text="cat"></option>
                                     </template>
                                 </select>
-                                <p style="font-weight:bold">Hold down the Ctrl (windows) or Command (Mac) button to select multiple options.</p>
                                 <div class="valid-feedback" style="font-size:large">
                                     Looks good!
                                 </div>
                                 <div class="invalid-feedback" style="font-size:large">
                                     Cant be empty.
                                 </div>
+                                <p style="font-weight:bold">Hold down the Ctrl (windows) or Command (Mac) button to select multiple options.</p>
                             </form>
                         </div>
-                        <button x-on:click="chosenRecipe= adjustRecipe(chosenRecipe,ing,ins);created=await createRecipe(chosenRecipe,logged);expandRecipe=!created" class="btn btn-success"><i class="bi bi-plus-circle-fill" style="font-style:normal"> Create Recipe</i></button>
+                        <button x-on:click="chosenRecipe= adjustRecipe(chosenRecipe,ing,ins);created=await createRecipe(chosenRecipe,logged);recipes = await listRecipes(logged);fire(created,'Created successfully');expandCreate=!created;" type="button" class="btn btn-success isWorking"><i class="bi bi-plus-circle-fill" style="font-style:normal"> Create Recipe</i></button>
                         <br><br>
                     </div>
                 </form>
@@ -534,9 +540,20 @@
                     function adjustRecipe(chosenRecipe, ing, ins) {
                         ing = ing.trim();
                         ins = ins.trim();
+                        ing = ing.replaceAll('/', '-');
+                        ins = ins.replaceAll('/', '-');
                         chosenRecipe.Ingredients = ing.split('\n');
                         chosenRecipe.Instructions = ins.split('\n');
                         return chosenRecipe;
+                    }
+                    function clear(chosenRecipe, ing, ins) {
+                        ing = '';
+                        ins = '';
+                        chosenRecipe.Title = '';
+                        chosenRecipe.Categories = [];
+                        chosenRecipe.ingredients = [];
+                        chosenRecipe.Instructions = [];
+                        return [chosenRecipe, ing, ins];
                     }
                 </script>
 
@@ -629,7 +646,7 @@
             </div>
 
             <div x-show="expandEdit" x-cloak x-transition x-data="{ edited:false }">
-                <form method="post" class="align-content-center col-6 needs-validation" style="margin:auto;text-align:center;margin-top:50px;color:#66FCF1" novalidate>
+                <form method="post" class="align-content-center col-6 needs-validation validate" style="margin:auto;text-align:center;margin-top:50px;color:#66FCF1" novalidate>
                     <input x-model="chosenRecipe.id" hidden>
                     <div>
                         <div class="row mt-4 col-11 m-auto">
@@ -681,7 +698,7 @@
                             </form>
                         </div>
                         <br>
-                        <button x-on:click="chosenRecipe=adjust(chosenRecipe);edited=await updateRecipe(chosenRecipe,chosenRecipe.id,logged);expandEdit= !edited;expandRecipe= !edited" class="btn btn-success" style="font-style:normal"> Edit</button>
+                        <button x-on:click="chosenRecipe=adjust(chosenRecipe);edited=await updateRecipe(chosenRecipe,chosenRecipe.id,logged);expandEdit= !edited;recipes=await listRecipes(logged);fire(edited,'Edited successfully')" type="button" class="btn btn-success isWorking" style="font-style:normal"> Edit</button>
                     </div>
                 </form>
                 <script>
