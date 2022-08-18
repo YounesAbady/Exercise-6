@@ -34,4 +34,9 @@ $('textarea.resize').each(function () {
 }).on('mousemove', function () {
     this.style.height = 'auto';
     this.style.height = (this.scrollHeight) + 'px';
+}).on('keydown', function (event) {
+    if (event.which === 9) {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    }
 });

@@ -1,4 +1,5 @@
 ﻿using Backend.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
@@ -59,10 +60,69 @@ namespace Backend.Controllers
             if (VerifyPassword(user.Password, loggedUser.PasswordHash, loggedUser.PasswordSalt))
             {
                 string token = CreateToken(loggedUser);
+                var refreshToken = CreateRefreshToken();
+                SetRefreshToken(refreshToken, loggedUser.Id);
+                string fileName = RecipeController.PathCombine(Environment.CurrentDirectory, @"\Users.json");
+                string jsonString = System.Text.Json.JsonSerializer.Serialize(s_users);
+                await System.IO.File.WriteAllTextAsync(fileName, jsonString);
+                s_isLoaded = false;
                 return Ok(token);
             }
             else
                 return BadRequest("Wrond password!");
+        }
+        [HttpPost]
+        [Route("api/refresh-token/{id}"),AllowAnonymous]
+        public async Task<ActionResult<string>> RefreshToken(Guid id , RefreshToken rT)
+        {
+            if (!s_isLoaded)
+            {
+                LoadData();
+            }
+            var refreshToken = rT;
+            User loggedUser = s_users.FirstOrDefault(user => user.Id == id);
+            if (!loggedUser.RefreshToken.Equals(refreshToken))
+                return Unauthorized("Invalid refresh token");
+            else if (loggedUser.TimeExpires < DateTime.Now)
+                return Unauthorized("Token expired");
+            else
+            {
+                string token = CreateToken(loggedUser);
+                var newRT = CreateRefreshToken();
+                SetRefreshToken(newRT, loggedUser.Id);
+                string fileName = RecipeController.PathCombine(Environment.CurrentDirectory, @"\Users.json");
+                string jsonString = System.Text.Json.JsonSerializer.Serialize(s_users);
+                await System.IO.File.WriteAllTextAsync(fileName, jsonString);
+                s_isLoaded = false;
+                return Ok(token);
+            }
+        }
+        private RefreshToken CreateRefreshToken()
+        {
+            var refreshToken = new RefreshToken
+            {
+                Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
+                TimeExpires = DateTime.Now.AddDays(1),
+                TimeCreated = DateTime.Now
+            };
+            return refreshToken;
+        }
+        private void SetRefreshToken(RefreshToken newRT, Guid id)
+        {
+            if (!s_isLoaded)
+            {
+                LoadData();
+            }
+            var cookiesOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Expires = newRT.TimeExpires
+            };
+            Response.Cookies.Append("refreshToken", newRT.Token, cookiesOptions);
+            User loggedUser = s_users.FirstOrDefault(x => x.Id == id);
+            loggedUser.RefreshToken = newRT.Token;
+            loggedUser.TimeCreated = newRT.TimeCreated;
+            loggedUser.TimeExpires = newRT.TimeExpires;
         }
         private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
@@ -96,7 +156,7 @@ namespace Backend.Controllers
             var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
             var token = new JwtSecurityToken(
                 claims: claims,
-                expires: DateTime.Now.AddMinutes(30),
+                expires: DateTime.Now.AddMinutes(1),
                 signingCredentials: cred
                 );
             var jwt = new JwtSecurityTokenHandler().WriteToken(token);
