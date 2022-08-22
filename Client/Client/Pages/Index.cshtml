@@ -45,6 +45,7 @@
                 <button x-on:click="logged=await login(user);logScreen=!logged;fire(logged,'Logged in successfully')" class="btn btn-success"><i class="bi bi-door-open-fill"> Sign in</i></button>
                 <script>
                     let refreshToken;
+                    var logged;
                     function fire(logged, msg) {
                         if (logged) {
                             Swal.fire({
@@ -81,9 +82,50 @@
                         })
                             .then(res => { return res })
                         if (response.ok) {
-                            refreshToken = response.headers.get('refreshToken');
-                            setInterval(getNewToken('f27298ab-bf49-4c0e-b21a-31f8e11eb10c', refreshToken), 120000);
+                            refreshToken = await getRefreshToken(user);
+                            let id = await getUserId(user);
+                            logged = await response.clone().text();
+                            setInterval(await getNewToken, 120000, id, refreshToken);
                             return response.text();
+                        }
+                        else
+                            return false;
+                    }
+                    async function getRefreshToken(user) {
+                        let url = '@baseAdress' + 'get-rt/' + JSON.stringify(user);
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                RequestVerificationToken:
+                                    document.getElementById("RequestVerificationToken").value
+                            },
+                            body: JSON.stringify({
+                                user: user
+                            })
+                        })
+                            .then(res => { return res })
+                        if (response.ok)
+                            return response.text();
+                        else
+                            return false;
+                    }
+                    async function getUserId(user) {
+                        let url = '@baseAdress' + 'get-id/' + JSON.stringify(user);
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                RequestVerificationToken:
+                                    document.getElementById("RequestVerificationToken").value
+                            },
+                            body: JSON.stringify({
+                                user: user
+                            })
+                        })
+                            .then(res => { return res })
+                        if (response.ok) {
+                            return response.json();
                         }
                         else
                             return false;
@@ -211,9 +253,9 @@
                 </div>
                 <div>
                     <h4 style="color:#C5C6C7;text-align:center;margin-top:15px;font-family:'Square Peg',cursive;">cook what you love</h4>
-                    <button x-on:click="recipes = await listRecipes(logged);expandRecipe= !expandRecipe;expandCategory=false" style="background-color:#1F2833;color:#C5C6C7;margin-top:25px;" class="btn">Recipes</button>
+                    <button x-on:click="recipes = await listRecipes();expandRecipe= !expandRecipe;expandCategory=false" style="background-color:#1F2833;color:#C5C6C7;margin-top:25px;" class="btn">Recipes</button>
                     <script>
-                        async function listRecipes(token) {
+                        async function listRecipes() {
                             let url = '@baseAdress' + 'list-recipes/';
                             const response = await fetch(url, {
                                 method: 'GET',
@@ -221,7 +263,7 @@
                                     'Content-Type': 'application/json',
                                     RequestVerificationToken:
                                         document.getElementById("RequestVerificationToken").value,
-                                    'Authorization': 'Bearer ' + token
+                                    'Authorization': 'Bearer ' + window.logged
                                 }
                             })
                                 .then(res => { return res })
@@ -246,9 +288,9 @@
                     </div>
                 </div>
                 <h4 style="color:#C5C6C7;text-align:center;margin-top:15px;font-family:'Square Peg',cursive;">discover different cultures</h4>
-                <button x-on:click="categories = await listCategories(logged);expandCategory= !expandCategory;expandRecipe=false" style="background-color:#1F2833;color:#C5C6C7;margin-top:25px" class="btn">Categories</button>
+                <button x-on:click="categories = await listCategories();expandCategory= !expandCategory;expandRecipe=false" style="background-color:#1F2833;color:#C5C6C7;margin-top:25px" class="btn">Categories</button>
                 <script>
-                    async function listCategories(token) {
+                    async function listCategories() {
                         let url = '@baseAdress' + 'list-categories';
                         const response = await fetch(url, {
                             method: 'GET',
@@ -256,7 +298,7 @@
                                 'Content-Type': 'application/json',
                                 RequestVerificationToken:
                                     document.getElementById("RequestVerificationToken").value,
-                                'Authorization': 'Bearer ' + token
+                                'Authorization': 'Bearer ' + window.logged
                             }
                         })
                             .then(res => { return res })
@@ -299,10 +341,10 @@
                     <div class="invalid-feedback" style="font-size:large">
                         Cant be empty.
                     </div>
-                    <button type="button" x-on:click="created=await createCategory(newCategory,logged);expandCreate= !created;fire(created,'Created successfully');newCategory='';categories=await listCategories(logged);" class="btn btn-success text-center isWorking" style="font-style:normal"> Add</button>
+                    <button type="button" x-on:click="created=await createCategory(newCategory);expandCreate= !created;fire(created,'Created successfully');newCategory='';categories=await listCategories();" class="btn btn-success text-center isWorking" style="font-style:normal"> Add</button>
                 </form>
                 <script>
-                    async function createCategory(category, token) {
+                    async function createCategory(category) {
                         let url = '@baseAdress' + 'add-category/' + category;
                         const response = await fetch(url, {
                             method: 'POST',
@@ -310,7 +352,7 @@
                                 'Content-Type': 'application/json',
                                 RequestVerificationToken:
                                     document.getElementById("RequestVerificationToken").value,
-                                'Authorization': 'Bearer ' + token
+                                'Authorization': 'Bearer ' + window.logged
                             },
                             body: JSON.stringify({
                                 category: category
@@ -340,14 +382,14 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button x-on:click="deleted=await deleteCategory(chosenCategory,logged);expandEdit=false;expandCreate=false;fire(deleted,'Deleted Successfully');categories = await listCategories(logged)" type="button" class="btn btn-primary" style="margin-right:125px" data-bs-dismiss="modal">Yes, delete it!</button>
+                            <button x-on:click="deleted=await deleteCategory(chosenCategory);expandEdit=false;expandCreate=false;fire(deleted,'Deleted Successfully');categories = await listCategories()" type="button" class="btn btn-primary" style="margin-right:125px" data-bs-dismiss="modal">Yes, delete it!</button>
                         </div>
                     </div>
                 </div>
             </div>
 
             <script>
-                async function deleteCategory(category, token) {
+                async function deleteCategory(category) {
                     let url = '@baseAdress' + 'delete-category/' + category;
                     const response = await fetch(url, {
                         method: 'DELETE',
@@ -355,7 +397,7 @@
                             'Content-Type': 'application/json',
                             RequestVerificationToken:
                                 document.getElementById("RequestVerificationToken").value,
-                            'Authorization': 'Bearer ' + token
+                            'Authorization': 'Bearer ' + window.logged
                         },
                         body: JSON.stringify({
                             category: category
@@ -371,7 +413,7 @@
 
             <!--Edit Category-->
 
-            <div x-show="expandEdit" x-cloak x-transition>
+            <div x-show="expandEdit" x-data="{ edited:false }" x-cloak x-transition >
                 <form method="post" class="align-content-center col-6 needs-validation" style="margin:auto;text-align:center;margin-top:50px;color:#1A2238" novalidate>
                     <input x-model="chosenCategory" type="text" required />
                     <div class="valid-feedback" style="font-size:large">
@@ -380,10 +422,10 @@
                     <div class="invalid-feedback" style="font-size:large">
                         Cant be empty.
                     </div>
-                    <button x-on:click="await editCategory(position,chosenCategory,logged);expandEdit= fasle;expandCategory= false" class="btn btn-success isWorking" style="font-style:normal"> Edit</button>
+                    <button type="button" x-on:click="edited = await editCategory(position,chosenCategory);expandEdit= !edited;fire(edited,'Edited Successfully');categories = await listCategories();" class="btn btn-success isWorking" style="font-style:normal"> Edit</button>
                 </form>
                 <script>
-                    async function editCategory(position, newCategory, token) {
+                    async function editCategory(position, newCategory) {
                         let url = '@baseAdress' + 'update-category/' + position + "/" + newCategory;
                         const response = await fetch(url, {
                             method: 'PUT',
@@ -391,7 +433,7 @@
                                 'Content-Type': 'application/json',
                                 RequestVerificationToken:
                                     document.getElementById("RequestVerificationToken").value,
-                                'Authorization': 'Bearer ' + token
+                                'Authorization': 'Bearer ' + window.logged
                             },
                             body: JSON.stringify({
                                 newCategory: newCategory
@@ -438,14 +480,14 @@
                                     </template>
                                 </div>
                                 <br>
-                                <a x-on:click="chosenRecipe.title=recipe.title;chosenRecipe.id=recipe.id;chosenRecipe.ingredients=recipe.ingredients;chosenRecipe.instructions=recipe.instructions;chosenRecipe.categories=recipe.categories;[chosenRecipe,editIngredients,editInstructions]=adjustEdit(chosenRecipe,editIngredients,editInstructions);expandEdit= !expandEdit;expandDelete=false;expandCreate=false;toast(expandEdit);categories = await listCategories(logged)" class="btn btn-dark" style="background-color:#1F2833;color:#C5C6C7;margin-top:10px;font-style:normal"><i class="bi bi-pencil-square" style="font-style:normal"> Edit</i></a>
+                                <a x-on:click="chosenRecipe.title=recipe.title;chosenRecipe.id=recipe.id;chosenRecipe.ingredients=recipe.ingredients;chosenRecipe.instructions=recipe.instructions;chosenRecipe.categories=recipe.categories;[chosenRecipe,editIngredients,editInstructions]=adjustEdit(chosenRecipe,editIngredients,editInstructions);expandEdit= !expandEdit;expandDelete=false;expandCreate=false;toast(expandEdit);categories = await listCategories()" class="btn btn-dark" style="background-color:#1F2833;color:#C5C6C7;margin-top:10px;font-style:normal"><i class="bi bi-pencil-square" style="font-style:normal"> Edit</i></a>
                                 <a x-on:click="deleteId=recipe.id" class="btn btn-danger" style="color:white;margin-top:10px;font-style:normal" data-bs-toggle="modal" data-bs-target="#deleteRecipeModal"><i class="bi bi-trash" style="font-style:normal"> Delete</i></a>
                             </div>
                         </div>
                     </div>
                 </template>
             </div>
-            <button x-on:click="expandCreate = ! expandCreate;expandDelete=false;expandEdit=false;categories = await listCategories(logged);[chosenRecipe,ing,ins]=clear(chosenRecipe,ing,ins)" style="background-color:#252f3e;color:white;margin-top:50px;margin-left:45%" class="btn text-center"><i class="bi bi-plus-circle" style="font-style:normal"> Create Recipe</i></button>
+            <button x-on:click="expandCreate = ! expandCreate;expandDelete=false;expandEdit=false;categories = await listCategories();[chosenRecipe,ing,ins]=clear(chosenRecipe,ing,ins)" style="background-color:#252f3e;color:white;margin-top:50px;margin-left:45%" class="btn text-center"><i class="bi bi-plus-circle" style="font-style:normal"> Create Recipe</i></button>
 
             <!--Create Recipe-->
 
@@ -500,13 +542,13 @@
                                 <p style="font-weight:bold">Hold down the Ctrl (windows) or Command (Mac) button to select multiple options.</p>
                             </form>
                         </div>
-                        <button x-on:click="chosenRecipe= adjustRecipe(chosenRecipe,ing,ins);created=await createRecipe(chosenRecipe,logged);recipes = await listRecipes(logged);fire(created,'Created successfully');expandCreate=!created;" type="button" class="btn btn-success isWorking"><i class="bi bi-plus-circle-fill" style="font-style:normal"> Create Recipe</i></button>
+                        <button x-on:click="chosenRecipe= adjustRecipe(chosenRecipe,ing,ins);created=await createRecipe(chosenRecipe);recipes = await listRecipes();fire(created,'Created successfully');expandCreate=!created;" type="button" class="btn btn-success isWorking"><i class="bi bi-plus-circle-fill" style="font-style:normal"> Create Recipe</i></button>
                         <br><br>
                     </div>
                 </form>
 
                 <script>
-                    async function createRecipe(recipe, token) {
+                    async function createRecipe(recipe) {
                         let url = '@baseAdress' + 'add-recipe/' + JSON.stringify(recipe);
                         const response = await fetch(url, {
                             method: 'POST',
@@ -514,7 +556,7 @@
                                 'Content-Type': 'application/json',
                                 RequestVerificationToken:
                                     document.getElementById("RequestVerificationToken").value,
-                                'Authorization': 'Bearer ' + token
+                                'Authorization': 'Bearer ' + window.logged
                             },
                             body: JSON.stringify({
                                 jsonRecipe: recipe
@@ -563,14 +605,14 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button x-on:click="deleted=await deleteRecipe(deleteId,logged);expandEdit=false;expandCreate=false;fire(deleted,'Deleted Successfully');recipes = await listRecipes(logged)" type="button" class="btn btn-primary" style="margin-right:125px" data-bs-dismiss="modal">Yes, delete it!</button>
+                            <button x-on:click="deleted=await deleteRecipe(deleteId);expandEdit=false;expandCreate=false;fire(deleted,'Deleted Successfully');recipes = await listRecipes()" type="button" class="btn btn-primary" style="margin-right:125px" data-bs-dismiss="modal">Yes, delete it!</button>
                         </div>
                     </div>
                 </div>
             </div>
 
             <script>
-                async function deleteRecipe(id, token) {
+                async function deleteRecipe(id) {
                     let url = '@baseAdress' + 'delete-recipe/' + id;
                     const response = await fetch(url, {
                         method: 'DELETE',
@@ -578,7 +620,7 @@
                             'Content-Type': 'application/json',
                             RequestVerificationToken:
                                 document.getElementById("RequestVerificationToken").value,
-                            'Authorization': 'Bearer ' + token
+                            'Authorization': 'Bearer ' + window.logged
                         },
                         body: {
                             id: id
@@ -674,11 +716,11 @@
                             </form>
                         </div>
                         <br>
-                        <button x-on:click="chosenRecipe=adjust(chosenRecipe,editIngredients,editInstructions);edited=await updateRecipe(chosenRecipe,chosenRecipe.id,logged);expandEdit= !edited;recipes=await listRecipes(logged);fire(edited,'Edited successfully')" type="button" class="btn btn-success isWorking" style="font-style:normal"> Edit</button>
+                        <button x-on:click="chosenRecipe=adjust(chosenRecipe,editIngredients,editInstructions);edited=await updateRecipe(chosenRecipe,chosenRecipe.id);expandEdit= !edited;recipes=await listRecipes();fire(edited,'Edited successfully')" type="button" class="btn btn-success isWorking" style="font-style:normal"> Edit</button>
                     </div>
                 </form>
                 <script>
-                    async function updateRecipe(jsonRecipe, id, token) {
+                    async function updateRecipe(jsonRecipe, id) {
                         let url = '@baseAdress' + 'update-recipe/' + JSON.stringify(jsonRecipe) + "/" + id;
                         const response = await fetch(url, {
                             method: 'PUT',
@@ -686,7 +728,7 @@
                                 'Content-Type': 'application/json',
                                 RequestVerificationToken:
                                     document.getElementById("RequestVerificationToken").value,
-                                'Authorization': 'Bearer ' + token
+                                'Authorization': 'Bearer ' + window.logged
                             },
                             body: JSON.stringify({
                                 jsonRecipe: jsonRecipe
@@ -743,7 +785,7 @@
 </div>
 <script>
     async function getNewToken(id, rT) {
-        let url = '@baseAdress' + 'refresh-token/' + id + '/' + JSON.stringify(rT);
+        let url = '@baseAdress' + 'refresh-token/' + rT + '/' + id;
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -752,12 +794,14 @@
                     document.getElementById("RequestVerificationToken").value
             },
             body: JSON.stringify({
-                id: id,
+                rT: rT
             })
         })
             .then(res => { return res })
-        if (response.ok)
+        if (response.ok) {
+            logged = await response.clone().text();
             return response.text();
+        }
         else
             return false;
     }

@@ -72,8 +72,8 @@ namespace Backend.Controllers
                 return BadRequest("Wrond password!");
         }
         [HttpPost]
-        [Route("api/refresh-token/{id}"),AllowAnonymous]
-        public async Task<ActionResult<string>> RefreshToken(Guid id , RefreshToken rT)
+        [Route("api/refresh-token/{rT}/{id}"), AllowAnonymous]
+        public async Task<ActionResult<string>> RefreshToken(string rT, Guid id)
         {
             if (!s_isLoaded)
             {
@@ -88,14 +88,52 @@ namespace Backend.Controllers
             else
             {
                 string token = CreateToken(loggedUser);
-                var newRT = CreateRefreshToken();
-                SetRefreshToken(newRT, loggedUser.Id);
+                //var newRT = CreateRefreshToken();
+                //SetRefreshToken(newRT, loggedUser.Id);
                 string fileName = RecipeController.PathCombine(Environment.CurrentDirectory, @"\Users.json");
                 string jsonString = System.Text.Json.JsonSerializer.Serialize(s_users);
                 await System.IO.File.WriteAllTextAsync(fileName, jsonString);
                 s_isLoaded = false;
                 return Ok(token);
             }
+        }
+        [HttpPost]
+        [Route("api/get-rt/{jsonUser}")]
+        public async Task<ActionResult<RefreshToken>> GetRefreshToken(string jsonUser)
+        {
+            if (!s_isLoaded)
+            {
+                LoadData();
+            }
+            UserDto user = JsonConvert.DeserializeObject<UserDto>(jsonUser);
+            User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
+            if (loggedUser == null)
+                return BadRequest("User not found!");
+            if (VerifyPassword(user.Password, loggedUser.PasswordHash, loggedUser.PasswordSalt))
+            {
+                return Ok(loggedUser.RefreshToken);
+            }
+            else
+                return BadRequest("Invalid user data!");
+        }
+        [HttpPost]
+        [Route("api/get-id/{jsonUser}")]
+        public async Task<ActionResult<RefreshToken>> GetUserId(string jsonUser)
+        {
+            if (!s_isLoaded)
+            {
+                LoadData();
+            }
+            UserDto user = JsonConvert.DeserializeObject<UserDto>(jsonUser);
+            User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
+            if (loggedUser == null)
+                return BadRequest("User not found!");
+            if (VerifyPassword(user.Password, loggedUser.PasswordHash, loggedUser.PasswordSalt))
+            {
+                return Ok(loggedUser.Id);
+            }
+            else
+                return BadRequest("Invalid user data!");
         }
         private RefreshToken CreateRefreshToken()
         {
@@ -105,9 +143,12 @@ namespace Backend.Controllers
                 TimeExpires = DateTime.Now.AddDays(1),
                 TimeCreated = DateTime.Now
             };
+            refreshToken.Token = refreshToken.Token.Replace("=", "");
+            refreshToken.Token = refreshToken.Token.Replace("+", "");
+            refreshToken.Token = refreshToken.Token.Replace("/", "");
             return refreshToken;
         }
-        private void SetRefreshToken(RefreshToken newRT, Guid id)
+        async private void SetRefreshToken(RefreshToken newRT, Guid id)
         {
             if (!s_isLoaded)
             {
@@ -118,11 +159,15 @@ namespace Backend.Controllers
                 HttpOnly = true,
                 Expires = newRT.TimeExpires
             };
-            Response.Cookies.Append("refreshToken", newRT.Token, cookiesOptions);
+            //Response.Cookies.Append("refreshToken", newRT.Token, cookiesOptions);
             User loggedUser = s_users.FirstOrDefault(x => x.Id == id);
             loggedUser.RefreshToken = newRT.Token;
             loggedUser.TimeCreated = newRT.TimeCreated;
             loggedUser.TimeExpires = newRT.TimeExpires;
+            string fileName = RecipeController.PathCombine(Environment.CurrentDirectory, @"\Users.json");
+            string jsonString = System.Text.Json.JsonSerializer.Serialize(s_users);
+            await System.IO.File.WriteAllTextAsync(fileName, jsonString);
+            s_isLoaded = false;
         }
         private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
@@ -157,7 +202,9 @@ namespace Backend.Controllers
             var token = new JwtSecurityToken(
                 claims: claims,
                 expires: DateTime.Now.AddMinutes(1),
-                signingCredentials: cred
+                signingCredentials: cred,
+                issuer:"Younes Abady",
+                audience: "https://localhost:7024/"
                 );
             var jwt = new JwtSecurityTokenHandler().WriteToken(token);
             return jwt;
