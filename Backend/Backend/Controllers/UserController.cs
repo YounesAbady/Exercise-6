@@ -23,15 +23,20 @@ namespace Backend.Controllers
         }
         [HttpPost]
         [Route("api/create-user/{jsonUser}")]
-        public async Task Register(string jsonUser)
+        public async Task<ActionResult> Register(string jsonUser)
         {
             if (!s_isLoaded)
             {
                 LoadData();
             }
             UserDto newUser = JsonConvert.DeserializeObject<UserDto>(jsonUser);
+            User user = s_users.Find(x => x.Name == newUser.Username);
             if (string.IsNullOrEmpty(newUser.Username) || string.IsNullOrEmpty(newUser.Password))
-                throw new InvalidOperationException("Cant be empty");
+                return BadRequest("Cant be empty");
+            else if (user != null)
+            {
+                return BadRequest("Username already taken!");
+            }
             else
             {
                 user.Name = newUser.Username;
@@ -43,6 +48,7 @@ namespace Backend.Controllers
                 string jsonString = System.Text.Json.JsonSerializer.Serialize(s_users);
                 await System.IO.File.WriteAllTextAsync(fileName, jsonString);
                 s_isLoaded = false;
+                return Ok();
             }
         }
         [HttpPost]
