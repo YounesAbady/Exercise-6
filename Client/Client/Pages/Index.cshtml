@@ -68,17 +68,18 @@
                         }
                     }
                     async function login(user) {
-                        let url = '@baseAdress' + 'login/' + JSON.stringify(user);
+                        let url = '@baseAdress' + 'login';
+                        user = {
+                            'Username': user.username,
+                            'Password': user.password
+                        }
                         const response = await fetch(url, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                RequestVerificationToken:
-                                    document.getElementById("RequestVerificationToken").value
+                                RequestVerificationToken: document.getElementById("RequestVerificationToken").value
                             },
-                            body: JSON.stringify({
-                                user: user
-                            })
+                            body: JSON.stringify(user)
                         })
                             .then(res => { return res })
                         if (response.ok) {
@@ -92,7 +93,7 @@
                             return false;
                     }
                     async function getRefreshToken(user) {
-                        let url = '@baseAdress' + 'get-rt/' + JSON.stringify(user);
+                        let url = '@baseAdress' + 'get-rt';
                         const response = await fetch(url, {
                             method: 'POST',
                             headers: {
@@ -100,9 +101,7 @@
                                 RequestVerificationToken:
                                     document.getElementById("RequestVerificationToken").value
                             },
-                            body: JSON.stringify({
-                                user: user
-                            })
+                            body: JSON.stringify(user)
                         })
                             .then(res => { return res })
                         if (response.ok)
@@ -111,7 +110,7 @@
                             return false;
                     }
                     async function getUserId(user) {
-                        let url = '@baseAdress' + 'get-id/' + JSON.stringify(user);
+                        let url = '@baseAdress' + 'get-id';
                         const response = await fetch(url, {
                             method: 'POST',
                             headers: {
@@ -119,9 +118,7 @@
                                 RequestVerificationToken:
                                     document.getElementById("RequestVerificationToken").value
                             },
-                            body: JSON.stringify({
-                                user: user
-                            })
+                            body: JSON.stringify(user)
                         })
                             .then(res => { return res })
                         if (response.ok) {
@@ -175,7 +172,7 @@
                 <button x-on:click="created=await register(newUser);fire(created,'Created successfully');expandRegister=!created;expandRegister=!created;expandLogin=!expandRegister" type="button" class="btn btn-success btn-block mb-3 isWorking"><i class="bi bi-patch-plus"> Sign up</i></button>
                 <script>
                     async function register(newUser) {
-                        let url = '@baseAdress' + 'create-user/' + JSON.stringify(newUser);
+                        let url = '@baseAdress' + 'create-user';
                         if (newUser.password != newUser.repeatedPassword) {
                             Swal.fire({
                                 icon: 'error',
@@ -185,6 +182,10 @@
                             })
                         }
                         else {
+                            newUser = {
+                                'Username': newUser.username,
+                                'Password': newUser.password
+                            }
                             const response = await fetch(url, {
                                 method: 'POST',
                                 headers: {
@@ -192,9 +193,7 @@
                                     RequestVerificationToken:
                                         document.getElementById("RequestVerificationToken").value
                                 },
-                                body: JSON.stringify({
-                                    newUser: newUser
-                                })
+                                body: JSON.stringify(newUser)
                             })
                                 .then(res => { return res })
                             if (response.ok)
@@ -345,7 +344,7 @@
                 </form>
                 <script>
                     async function createCategory(category) {
-                        let url = '@baseAdress' + 'add-category/' + category;
+                        let url = '@baseAdress' + 'add-category';
                         const response = await fetch(url, {
                             method: 'POST',
                             headers: {
@@ -354,9 +353,7 @@
                                     document.getElementById("RequestVerificationToken").value,
                                 'Authorization': 'Bearer ' + window.logged
                             },
-                            body: JSON.stringify({
-                                category: category
-                            })
+                            body: JSON.stringify(category)
                         })
                             .then(res => { return res })
                         if (response.ok)
@@ -390,7 +387,7 @@
 
             <script>
                 async function deleteCategory(category) {
-                    let url = '@baseAdress' + 'delete-category/' + category;
+                    let url = '@baseAdress' + 'delete-category';
                     const response = await fetch(url, {
                         method: 'DELETE',
                         headers: {
@@ -399,9 +396,7 @@
                                 document.getElementById("RequestVerificationToken").value,
                             'Authorization': 'Bearer ' + window.logged
                         },
-                        body: JSON.stringify({
-                            category: category
-                        })
+                        body: JSON.stringify(category)
                     })
                         .then(res => { return res })
                     if (response.ok)
@@ -413,7 +408,7 @@
 
             <!--Edit Category-->
 
-            <div x-show="expandEdit" x-data="{ edited:false }" x-cloak x-transition >
+            <div x-show="expandEdit" x-data="{ edited:false }" x-cloak x-transition>
                 <form method="post" class="align-content-center col-6 needs-validation" style="margin:auto;text-align:center;margin-top:50px;color:#1A2238" novalidate>
                     <input x-model="chosenCategory" type="text" required />
                     <div class="valid-feedback" style="font-size:large">
@@ -426,7 +421,7 @@
                 </form>
                 <script>
                     async function editCategory(position, newCategory) {
-                        let url = '@baseAdress' + 'update-category/' + position + "/" + newCategory;
+                        let url = '@baseAdress' + 'update-category/' + position;
                         const response = await fetch(url, {
                             method: 'PUT',
                             headers: {
@@ -435,9 +430,7 @@
                                     document.getElementById("RequestVerificationToken").value,
                                 'Authorization': 'Bearer ' + window.logged
                             },
-                            body: JSON.stringify({
-                                newCategory: newCategory
-                            })
+                            body: JSON.stringify(newCategory)
                         })
                             .then(res => { return res })
                         if (response.ok)
@@ -549,7 +542,13 @@
 
                 <script>
                     async function createRecipe(recipe) {
-                        let url = '@baseAdress' + 'add-recipe/' + JSON.stringify(recipe);
+                        recipe = {
+                            'Title': recipe.Title,
+                            'Ingredients': recipe.Ingredients,
+                            'Instructions': recipe.Instructions,
+                            'Categories': recipe.Categories
+                        }
+                        let url = '@baseAdress' + 'add-recipe';
                         const response = await fetch(url, {
                             method: 'POST',
                             headers: {
@@ -558,9 +557,7 @@
                                     document.getElementById("RequestVerificationToken").value,
                                 'Authorization': 'Bearer ' + window.logged
                             },
-                            body: JSON.stringify({
-                                jsonRecipe: recipe
-                            })
+                            body: JSON.stringify(recipe)
                         })
                             .then(res => { return res })
                         if (response.ok)
@@ -613,7 +610,7 @@
 
             <script>
                 async function deleteRecipe(id) {
-                    let url = '@baseAdress' + 'delete-recipe/' + id;
+                    let url = '@baseAdress' + 'delete-recipe';
                     const response = await fetch(url, {
                         method: 'DELETE',
                         headers: {
@@ -622,9 +619,7 @@
                                 document.getElementById("RequestVerificationToken").value,
                             'Authorization': 'Bearer ' + window.logged
                         },
-                        body: {
-                            id: id
-                        }
+                        body: JSON.stringify(id)
                     })
                         .then(res => { return res })
                     if (response.ok)
@@ -721,7 +716,14 @@
                 </form>
                 <script>
                     async function updateRecipe(jsonRecipe, id) {
-                        let url = '@baseAdress' + 'update-recipe/' + JSON.stringify(jsonRecipe) + "/" + id;
+                        jsonRecipe = {
+                            'Id': jsonRecipe.Id,
+                            'Title': jsonRecipe.Title,
+                            'Ingredients': jsonRecipe.Ingredients,
+                            'Instructions': jsonRecipe.Instructions,
+                            'Categories': jsonRecipe.Categories
+                        }
+                        let url = '@baseAdress' + 'update-recipe/' + id;
                         const response = await fetch(url, {
                             method: 'PUT',
                             headers: {
@@ -730,9 +732,7 @@
                                     document.getElementById("RequestVerificationToken").value,
                                 'Authorization': 'Bearer ' + window.logged
                             },
-                            body: JSON.stringify({
-                                jsonRecipe: jsonRecipe
-                            })
+                            body: JSON.stringify(jsonRecipe)
                         })
                             .then(res => { return res })
                         if (response.ok)
@@ -785,7 +785,7 @@
 </div>
 <script>
     async function getNewToken(id, rT) {
-        let url = '@baseAdress' + 'refresh-token/' + rT + '/' + id;
+        let url = '@baseAdress' + 'refresh-token/' + id;
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -793,9 +793,7 @@
                 RequestVerificationToken:
                     document.getElementById("RequestVerificationToken").value
             },
-            body: JSON.stringify({
-                rT: rT
-            })
+            body: JSON.stringify(rT)
         })
             .then(res => { return res })
         if (response.ok) {

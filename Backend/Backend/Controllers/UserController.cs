@@ -1,4 +1,5 @@
 ﻿using Backend.Models;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -14,23 +15,25 @@ namespace Backend.Controllers
     public class UserController : Controller
     {
         private static bool s_isLoaded = false;
-        public static User user = new User();
+        //public static User user = new User();
         private static List<User> s_users = new List<User>();
         private readonly IConfiguration _configuration;
-        public UserController(IConfiguration config)
+        private readonly IAntiforgery _antiforgory;
+        public UserController(IConfiguration config, IAntiforgery antiforgery)
         {
             _configuration = config;
+            _antiforgory = antiforgery;
         }
         [HttpPost]
-        [Route("api/create-user/{jsonUser}")]
-        public async Task<ActionResult> Register(string jsonUser)
+        [Route("api/create-user")]
+        public async Task<ActionResult> Register([FromBody] UserDto newUser)
         {
             if (!s_isLoaded)
             {
-                LoadData();
+                await LoadData();
             }
-            UserDto newUser = JsonConvert.DeserializeObject<UserDto>(jsonUser);
-            User user = s_users.Find(x => x.Name == newUser.Username);
+            //UserDto newUser = JsonConvert.DeserializeObject<UserDto>(jsonUser);
+            User user = s_users.FirstOrDefault(x => x.Name == newUser.Username);
             if (string.IsNullOrEmpty(newUser.Username) || string.IsNullOrEmpty(newUser.Password))
                 return BadRequest("Cant be empty");
             else if (user != null)
@@ -39,27 +42,26 @@ namespace Backend.Controllers
             }
             else
             {
+                user = new User();
                 user.Name = newUser.Username;
                 CreatePasswordHash(newUser.Password, out byte[] passwordHash, out byte[] passwordSalt);
                 user.PasswordHash = passwordHash;
                 user.PasswordSalt = passwordSalt;
                 s_users.Add(user);
-                string fileName = RecipeController.PathCombine(Environment.CurrentDirectory, @"\Users.json");
-                string jsonString = System.Text.Json.JsonSerializer.Serialize(s_users);
-                await System.IO.File.WriteAllTextAsync(fileName, jsonString);
-                s_isLoaded = false;
+                await SaveData();
                 return Ok();
             }
         }
         [HttpPost]
-        [Route("api/login/{jsonUser}")]
-        public async Task<ActionResult> Login(string jsonUser)
+        [Route("api/login")]
+        public async Task<ActionResult> Login([FromBody] UserDto user)
         {
+            await _antiforgory.ValidateRequestAsync(HttpContext);
             if (!s_isLoaded)
             {
-                LoadData();
+                await LoadData();
             }
-            UserDto user = JsonConvert.DeserializeObject<UserDto>(jsonUser);
+            //UserDto user = JsonConvert.DeserializeObject<UserDto>(jsonUser);
             User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
             if (loggedUser == null)
                 return BadRequest("User not found!");
@@ -68,22 +70,19 @@ namespace Backend.Controllers
                 string token = CreateToken(loggedUser);
                 var refreshToken = CreateRefreshToken();
                 SetRefreshToken(refreshToken, loggedUser.Id);
-                string fileName = RecipeController.PathCombine(Environment.CurrentDirectory, @"\Users.json");
-                string jsonString = System.Text.Json.JsonSerializer.Serialize(s_users);
-                await System.IO.File.WriteAllTextAsync(fileName, jsonString);
-                s_isLoaded = false;
+                await SaveData();
                 return Ok(token);
             }
             else
                 return BadRequest("Wrond password!");
         }
         [HttpPost]
-        [Route("api/refresh-token/{rT}/{id}"), AllowAnonymous]
-        public async Task<ActionResult<string>> RefreshToken(string rT, Guid id)
+        [Route("api/refresh-token/{id}"), AllowAnonymous]
+        public async Task<ActionResult<string>> RefreshToken([FromBody] string rT, Guid id)
         {
             if (!s_isLoaded)
             {
-                LoadData();
+                await LoadData();
             }
             var refreshToken = rT;
             User loggedUser = s_users.FirstOrDefault(user => user.Id == id);
@@ -96,22 +95,19 @@ namespace Backend.Controllers
                 string token = CreateToken(loggedUser);
                 //var newRT = CreateRefreshToken();
                 //SetRefreshToken(newRT, loggedUser.Id);
-                string fileName = RecipeController.PathCombine(Environment.CurrentDirectory, @"\Users.json");
-                string jsonString = System.Text.Json.JsonSerializer.Serialize(s_users);
-                await System.IO.File.WriteAllTextAsync(fileName, jsonString);
-                s_isLoaded = false;
+                await SaveData();
                 return Ok(token);
             }
         }
         [HttpPost]
-        [Route("api/get-rt/{jsonUser}")]
-        public async Task<ActionResult<RefreshToken>> GetRefreshToken(string jsonUser)
+        [Route("api/get-rt")]
+        public async Task<ActionResult<RefreshToken>> GetRefreshToken([FromBody] UserDto user)
         {
             if (!s_isLoaded)
             {
-                LoadData();
+                await LoadData();
             }
-            UserDto user = JsonConvert.DeserializeObject<UserDto>(jsonUser);
+            //UserDto user = JsonConvert.DeserializeObject<UserDto>(jsonUser);
             User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
             if (loggedUser == null)
                 return BadRequest("User not found!");
@@ -123,14 +119,14 @@ namespace Backend.Controllers
                 return BadRequest("Invalid user data!");
         }
         [HttpPost]
-        [Route("api/get-id/{jsonUser}")]
-        public async Task<ActionResult<RefreshToken>> GetUserId(string jsonUser)
+        [Route("api/get-id")]
+        public async Task<ActionResult<RefreshToken>> GetUserId([FromBody] UserDto user)
         {
             if (!s_isLoaded)
             {
-                LoadData();
+                await LoadData();
             }
-            UserDto user = JsonConvert.DeserializeObject<UserDto>(jsonUser);
+            //UserDto user = JsonConvert.DeserializeObject<UserDto>(jsonUser);
             User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
             if (loggedUser == null)
                 return BadRequest("User not found!");
@@ -149,16 +145,16 @@ namespace Backend.Controllers
                 TimeExpires = DateTime.Now.AddDays(1),
                 TimeCreated = DateTime.Now
             };
-            refreshToken.Token = refreshToken.Token.Replace("=", "");
-            refreshToken.Token = refreshToken.Token.Replace("+", "");
-            refreshToken.Token = refreshToken.Token.Replace("/", "");
+            //refreshToken.Token = refreshToken.Token.Replace("=", "");
+            //refreshToken.Token = refreshToken.Token.Replace("+", "");
+            //refreshToken.Token = refreshToken.Token.Replace("/", "");
             return refreshToken;
         }
         async private void SetRefreshToken(RefreshToken newRT, Guid id)
         {
             if (!s_isLoaded)
             {
-                LoadData();
+                await LoadData();
             }
             var cookiesOptions = new CookieOptions
             {
@@ -170,10 +166,7 @@ namespace Backend.Controllers
             loggedUser.RefreshToken = newRT.Token;
             loggedUser.TimeCreated = newRT.TimeCreated;
             loggedUser.TimeExpires = newRT.TimeExpires;
-            string fileName = RecipeController.PathCombine(Environment.CurrentDirectory, @"\Users.json");
-            string jsonString = System.Text.Json.JsonSerializer.Serialize(s_users);
-            await System.IO.File.WriteAllTextAsync(fileName, jsonString);
-            s_isLoaded = false;
+            await SaveData();
         }
         private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
@@ -191,11 +184,40 @@ namespace Backend.Controllers
                 return computedHash.SequenceEqual(passwordHash);
             }
         }
-        private async void LoadData()
+        private async Task LoadData()
         {
-            string fileName = RecipeController.PathCombine(Environment.CurrentDirectory, @"\Users.json");
-            string jsonString = await System.IO.File.ReadAllTextAsync(fileName);
-            s_users = System.Text.Json.JsonSerializer.Deserialize<List<User>>(jsonString);
+            while (!s_isLoaded)
+            {
+                try
+                {
+                    string fileName = RecipeController.PathCombine(Environment.CurrentDirectory, @"\Users.json");
+                    string jsonString = await System.IO.File.ReadAllTextAsync(fileName);
+                    s_users = System.Text.Json.JsonSerializer.Deserialize<List<User>>(jsonString);
+                    s_isLoaded = true;
+                }
+                catch
+                {
+                    Thread.Sleep(100);
+                }
+            }
+        }
+        private async Task SaveData()
+        {
+            while (true)
+            {
+                try
+                {
+                    string fileName = RecipeController.PathCombine(Environment.CurrentDirectory, @"\Users.json");
+                    string jsonString = System.Text.Json.JsonSerializer.Serialize(s_users);
+                    await System.IO.File.WriteAllTextAsync(fileName, jsonString);
+                    s_isLoaded = false;
+                    break;
+                }
+                catch
+                {
+                    Thread.Sleep(100);
+                }
+            }
         }
         private string CreateToken(User user)
         {
@@ -209,7 +231,7 @@ namespace Backend.Controllers
                 claims: claims,
                 expires: DateTime.Now.AddMinutes(1),
                 signingCredentials: cred,
-                issuer:"Younes Abady",
+                issuer: "Younes Abady",
                 audience: "https://localhost:7024/"
                 );
             var jwt = new JwtSecurityTokenHandler().WriteToken(token);
