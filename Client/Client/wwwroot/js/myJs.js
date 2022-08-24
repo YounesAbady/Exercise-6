@@ -7,7 +7,7 @@
     // Loop over them and prevent submission
     Array.prototype.slice.call(forms)
         .forEach(function (form) {
-            form.addEventListener('mouseover', function (event) {
+            form.addEventListener('input', function (event) {
                 let buttons = document.getElementsByClassName("isWorking");
                 let i;
                 if (!form.checkValidity()) {
@@ -34,7 +34,7 @@ $('textarea.resize').each(function () {
 }).on('mousemove', function () {
     this.style.height = 'auto';
     this.style.height = (this.scrollHeight) + 'px';
-}).on('keydown', function (event) {
+}).on('keyup', function (event) {
     if (event.which === 9) {
         this.style.height = 'auto';
         this.style.height = (this.scrollHeight) + 'px';

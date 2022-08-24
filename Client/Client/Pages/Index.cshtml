@@ -44,7 +44,7 @@
                 </div>
                 <button x-on:click="logged=await login(user);logScreen=!logged;fire(logged,'Logged in successfully')" class="btn btn-success"><i class="bi bi-door-open-fill"> Sign in</i></button>
                 <script>
-                    let refreshToken;
+                    var refreshToken;
                     var logged;
                     function fire(logged, msg) {
                         if (logged) {
@@ -83,14 +83,19 @@
                         })
                             .then(res => { return res })
                         if (response.ok) {
-                            refreshToken = await getRefreshToken(user);
                             let id = await getUserId(user);
                             logged = await response.clone().text();
-                            setInterval(await getNewToken, 120000, id, refreshToken);
+                            setInterval(await getNewToken, 120000, id, user);
                             return response.text();
                         }
-                        else
-                            return false;
+                        else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: await response.text(),
+                                showConfirmButton: false,
+                                timer: 1500
+                            })
+                        }
                     }
                     async function getRefreshToken(user) {
                         let url = '@baseAdress' + 'get-rt';
@@ -169,7 +174,7 @@
                         Cant be empty.
                     </div>
                 </div>
-                <button x-on:click="created=await register(newUser);fire(created,'Created successfully');expandRegister=!created;expandRegister=!created;expandLogin=!expandRegister" type="button" class="btn btn-success btn-block mb-3 isWorking"><i class="bi bi-patch-plus"> Sign up</i></button>
+                <button x-on:click="created=await register(newUser);fire(created,'Created successfully');expandRegister=!created;expandRegister=!created;expandLogin=!expandRegister" type="button" class="btn btn-success btn-block mb-3 isWorking" disabled><i class="bi bi-patch-plus"> Sign up</i></button>
                 <script>
                     async function register(newUser) {
                         let url = '@baseAdress' + 'create-user';
@@ -198,8 +203,14 @@
                                 .then(res => { return res })
                             if (response.ok)
                                 return true;
-                            else
-                                return false;
+                            else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: await response.text(),
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                })
+                            }
                         }
                     }
                 </script>
@@ -215,15 +226,23 @@
         <!--Nav Bar-->
 
         <header>
-            <nav class="navbar navbar-expand-lg" style="height:60px;">
-                <div class="container-fluid">
+            <nav class="container row navbar navbar-expand-lg" style="height:60px;">
+                <div class="container-fluid" style="position:relative">
                     <div class="collapse navbar-collapse" id="navbarColor03">
                         <ul class="navbar-nav me-auto">
-                            <li style="margin-left:675px;margin-top:30px;">
+                            <li class="col" style="margin-top:30px;">
                                 <div class="logo-holder logo-5">
-                                    <a class="nav-link text-light" asp-page="/Home">
+                                    <a x-on:click="expandRecipe=false;expandCategory=false;" class="nav-link text-light">
                                         <h3>Yum</h3>
                                         <p>City</p>
+                                    </a>
+                                </div>
+                            </li>
+                            <li class="col" style="position:absolute;right:0;">
+                                <div style="width:max-content;margin-top:40px;">
+                                    <a onClick="window.location.reload();"
+                                       class="btn btn-outline-dark" style="color:#66FCF1">
+                                        <span class="glyphicon glyphicon-log-out"></span> Log out
                                     </a>
                                 </div>
                             </li>
@@ -235,8 +254,8 @@
 
         <!--Home-->
 
-        <div class="row row-cols-1 row-cols-md-2 g-2 text-center">
-            <div class="col" style="width:400px;height:500px;margin-left:200px;margin-top:25px;border-style:groove;border-color:#66FCF1">
+        <div class="container row row-cols-3 row-cols-md-3 g-3 text-center align-items-center" style="align-content:center">
+            <div class="col" style="margin-left:225px;margin-top:25px;border-style:groove;border-color:#66FCF1">
                 <div id="carouselExampleSlidesOnly" class="carousel slide" data-bs-ride="carousel">
                     <div class="carousel-inner">
                         <div class="carousel-item active">
@@ -272,7 +291,7 @@
                     </script>
                 </div>
             </div>
-            <div class="col" style="width:400px;height:500px;margin-left:300px;margin-top:25px;border-style:groove;border-color:#66FCF1">
+            <div class="col" style="margin-left:200px;margin-top:25px;border-style:groove;border-color:#66FCF1">
                 <div id="carouselExampleSlidesOnly" class="carousel slide" data-bs-ride="carousel">
                     <div class="carousel-inner">
                         <div class="carousel-item active">
@@ -315,7 +334,7 @@
                 <template x-for="(category, index) in categories">
                     <div>
                         <div class="col">
-                            <div class="card h-100 text-center" style="border:groove;border-color:#66FCF1;background-color:transparent;margin-left:2px;margin-top:5px;">
+                            <div class="card h-100 text-center" style="border:groove;border-color:#66FCF1;background-color:transparent;margin-left:2px;margin-top:50px;">
                                 <div class="card-body">
                                     <h5 x-text="category" class="card-title" style="color:white"></h5>
                                     <a x-on:click="chosenCategory= category ;position=index+1;expandEdit= !expandEdit;expandDelete=false;expandCreate=false" class="btn btn-dark" style="background-color:#1F2833;color:#C5C6C7;margin-top:10px;"><i class="bi bi-pencil-square" style="font-style:normal"> Edit</i></a>
@@ -340,7 +359,7 @@
                     <div class="invalid-feedback" style="font-size:large">
                         Cant be empty.
                     </div>
-                    <button type="button" x-on:click="created=await createCategory(newCategory);expandCreate= !created;fire(created,'Created successfully');newCategory='';categories=await listCategories();" class="btn btn-success text-center isWorking" style="font-style:normal"> Add</button>
+                    <button type="button" x-on:click="created=await createCategory(newCategory);expandCreate= !created;fire(created,'Created successfully');newCategory='';categories=await listCategories();" class="btn btn-success text-center isWorking" style="font-style:normal" disabled> Add</button>
                 </form>
                 <script>
                     async function createCategory(category) {
@@ -449,7 +468,7 @@
             <div class="row row-cols-1 row-cols-md-4 g-2 text-center">
                 <template x-for="recipe in recipes">
                     <div class="col">
-                        <div class="card h-100 text-center" style="background-color:transparent;margin-left:2px;margin-top:5px;margin-right:50px;border:groove;border-color:#66FCF1;">
+                        <div class="card h-100 text-center" style="background-color:transparent;margin-left:2px;margin-top:50px;margin-right:50px;margin-bottom:25px;border:groove;border-color:#66FCF1;">
                             <div class="card-body">
                                 <h5 x-text="recipe.title" class="card-title" style="color:white"></h5>
                                 <div x-data="{ expanded: false }">
@@ -480,7 +499,7 @@
                     </div>
                 </template>
             </div>
-            <button x-on:click="expandCreate = ! expandCreate;expandDelete=false;expandEdit=false;categories = await listCategories();[chosenRecipe,ing,ins]=clear(chosenRecipe,ing,ins)" style="background-color:#252f3e;color:white;margin-top:50px;margin-left:45%" class="btn text-center"><i class="bi bi-plus-circle" style="font-style:normal"> Create Recipe</i></button>
+            <button x-on:click="expandCreate = ! expandCreate;expandDelete=false;expandEdit=false;categories = await listCategories();[chosenRecipe,ing,ins]=clear(chosenRecipe,ing,ins)" style="background-color:#252f3e;color:white;margin-top:75px;margin-left:45%" class="btn text-center"><i class="bi bi-plus-circle" style="font-style:normal"> Create Recipe</i></button>
 
             <!--Create Recipe-->
 
@@ -535,7 +554,7 @@
                                 <p style="font-weight:bold">Hold down the Ctrl (windows) or Command (Mac) button to select multiple options.</p>
                             </form>
                         </div>
-                        <button x-on:click="chosenRecipe= adjustRecipe(chosenRecipe,ing,ins);created=await createRecipe(chosenRecipe);recipes = await listRecipes();fire(created,'Created successfully');expandCreate=!created;" type="button" class="btn btn-success isWorking"><i class="bi bi-plus-circle-fill" style="font-style:normal"> Create Recipe</i></button>
+                        <button x-on:click="chosenRecipe= adjustRecipe(chosenRecipe,ing,ins);created=await createRecipe(chosenRecipe);recipes = await listRecipes();fire(created,'Created successfully');expandCreate=!created;" type="button" class="btn btn-success isWorking" disabled><i class="bi bi-plus-circle-fill" style="font-style:normal"> Create Recipe</i></button>
                         <br><br>
                     </div>
                 </form>
@@ -784,7 +803,8 @@
     </div>
 </div>
 <script>
-    async function getNewToken(id, rT) {
+    async function getNewToken(id, user) {
+        rT = await getRefreshToken(user);
         let url = '@baseAdress' + 'refresh-token/' + id;
         const response = await fetch(url, {
             method: 'POST',

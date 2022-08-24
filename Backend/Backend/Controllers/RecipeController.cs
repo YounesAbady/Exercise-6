@@ -52,7 +52,6 @@ namespace Backend.Controllers
         [Route("api/add-recipe"), Authorize]
         public async void AddRecipe([FromBody] Recipe recipe)
         {
-            //Recipe recipe = JsonSerializer.Deserialize<Recipe>(jsonRecipe);
             recipe.Ingredients = recipe.Ingredients.Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
             recipe.Instructions = recipe.Instructions.Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
             if (recipe.Ingredients.Count == 0 || recipe.Instructions.Count == 0 || recipe.Categories.Count == 0 || string.IsNullOrWhiteSpace(recipe.Title))
@@ -135,7 +134,6 @@ namespace Backend.Controllers
             else
             {
                 Recipe oldRecipe = s_recipes.FirstOrDefault(x => x.Id == id);
-                //Recipe newRecipe = JsonSerializer.Deserialize<Recipe>(jsonRecipe);
                 newRecipe.Ingredients = newRecipe.Ingredients.Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
                 newRecipe.Instructions = newRecipe.Instructions.Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
                 if (newRecipe.Ingredients.Count == 0 || newRecipe.Instructions.Count == 0 || newRecipe.Categories.Count == 0 || string.IsNullOrWhiteSpace(newRecipe.Title))
@@ -201,6 +199,7 @@ namespace Backend.Controllers
             {
                 try
                 {
+                    SortRecipes();
                     var fileName = PathCombine(Environment.CurrentDirectory, @"\Recipes.json");
                     var jsonString = JsonSerializer.Serialize(s_recipes);
                     await File.WriteAllTextAsync(fileName, jsonString);
@@ -219,6 +218,7 @@ namespace Backend.Controllers
             {
                 try
                 {
+                    SortCategories();
                     string fileName = PathCombine(Environment.CurrentDirectory, @"\Categories.json");
                     string jsonString = JsonSerializer.Serialize(s_categoriesNames);
                     await File.WriteAllTextAsync(fileName, jsonString);
@@ -230,6 +230,44 @@ namespace Backend.Controllers
                     Thread.Sleep(100);
                 }
             }
+        }
+        private void SortCategories()
+        {
+            int x = 0;
+            do
+            {
+                x = 0;
+                for (int i = 0; i < s_categoriesNames.Count - 1; i++)
+                {
+                    if (char.ToUpper(s_categoriesNames[i][0]) > char.ToUpper(s_categoriesNames[i + 1][0]))
+                    {
+                        x++;
+                        string tmp = s_categoriesNames[i];
+                        s_categoriesNames[i] = s_categoriesNames[i + 1];
+                        s_categoriesNames[i + 1] = tmp;
+                    }
+                }
+
+            } while (x > 0);
+        }
+        private void SortRecipes()
+        {
+            int x = 0;
+            do
+            {
+                x = 0;
+                for (int i = 0; i < s_recipes.Count - 1; i++)
+                {
+                    if (char.ToUpper(s_recipes[i].Title[0]) > char.ToUpper(s_recipes[i + 1].Title[0]))
+                    {
+                        x++;
+                        Recipe tmp = s_recipes[i];
+                        s_recipes[i] = s_recipes[i + 1];
+                        s_recipes[i + 1] = tmp;
+                    }
+                }
+
+            } while (x > 0);
         }
     }
 }

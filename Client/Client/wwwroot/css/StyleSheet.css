@@ -37,3 +37,6 @@
     font-family: 'Mansalva', cursive;
     position: relative;
 }
+a {
+    cursor: pointer;
+}

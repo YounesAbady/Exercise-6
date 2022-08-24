@@ -15,7 +15,6 @@ namespace Backend.Controllers
     public class UserController : Controller
     {
         private static bool s_isLoaded = false;
-        //public static User user = new User();
         private static List<User> s_users = new List<User>();
         private readonly IConfiguration _configuration;
         private readonly IAntiforgery _antiforgory;
@@ -32,7 +31,6 @@ namespace Backend.Controllers
             {
                 await LoadData();
             }
-            //UserDto newUser = JsonConvert.DeserializeObject<UserDto>(jsonUser);
             User user = s_users.FirstOrDefault(x => x.Name == newUser.Username);
             if (string.IsNullOrEmpty(newUser.Username) || string.IsNullOrEmpty(newUser.Password))
                 return BadRequest("Cant be empty");
@@ -56,12 +54,11 @@ namespace Backend.Controllers
         [Route("api/login")]
         public async Task<ActionResult> Login([FromBody] UserDto user)
         {
-            await _antiforgory.ValidateRequestAsync(HttpContext);
+            //await _antiforgory.ValidateRequestAsync(HttpContext);
             if (!s_isLoaded)
             {
                 await LoadData();
             }
-            //UserDto user = JsonConvert.DeserializeObject<UserDto>(jsonUser);
             User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
             if (loggedUser == null)
                 return BadRequest("User not found!");
@@ -93,8 +90,8 @@ namespace Backend.Controllers
             else
             {
                 string token = CreateToken(loggedUser);
-                //var newRT = CreateRefreshToken();
-                //SetRefreshToken(newRT, loggedUser.Id);
+                var newRT = CreateRefreshToken();
+                SetRefreshToken(newRT, loggedUser.Id);
                 await SaveData();
                 return Ok(token);
             }
@@ -107,7 +104,6 @@ namespace Backend.Controllers
             {
                 await LoadData();
             }
-            //UserDto user = JsonConvert.DeserializeObject<UserDto>(jsonUser);
             User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
             if (loggedUser == null)
                 return BadRequest("User not found!");
@@ -126,7 +122,6 @@ namespace Backend.Controllers
             {
                 await LoadData();
             }
-            //UserDto user = JsonConvert.DeserializeObject<UserDto>(jsonUser);
             User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
             if (loggedUser == null)
                 return BadRequest("User not found!");
@@ -145,9 +140,6 @@ namespace Backend.Controllers
                 TimeExpires = DateTime.Now.AddDays(1),
                 TimeCreated = DateTime.Now
             };
-            //refreshToken.Token = refreshToken.Token.Replace("=", "");
-            //refreshToken.Token = refreshToken.Token.Replace("+", "");
-            //refreshToken.Token = refreshToken.Token.Replace("/", "");
             return refreshToken;
         }
         async private void SetRefreshToken(RefreshToken newRT, Guid id)
@@ -161,7 +153,6 @@ namespace Backend.Controllers
                 HttpOnly = true,
                 Expires = newRT.TimeExpires
             };
-            //Response.Cookies.Append("refreshToken", newRT.Token, cookiesOptions);
             User loggedUser = s_users.FirstOrDefault(x => x.Id == id);
             loggedUser.RefreshToken = newRT.Token;
             loggedUser.TimeCreated = newRT.TimeCreated;
@@ -229,7 +220,7 @@ namespace Backend.Controllers
             var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
             var token = new JwtSecurityToken(
                 claims: claims,
-                expires: DateTime.Now.AddMinutes(1),
+                expires: DateTime.Now.AddMinutes(2),
                 signingCredentials: cred,
                 issuer: "Younes Abady",
                 audience: "https://localhost:7024/"
