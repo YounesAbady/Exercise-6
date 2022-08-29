@@ -17,12 +17,16 @@ namespace Backend.Controllers
         private static bool s_isLoaded = false;
         private static List<User> s_users = new List<User>();
         private readonly IConfiguration _configuration;
-        private readonly IAntiforgery _antiforgory;
+        private readonly IAntiforgery _antiforgery;
+        public static IAntiforgery GlobalAntiforgery;
+
         public UserController(IConfiguration config, IAntiforgery antiforgery)
         {
             _configuration = config;
-            _antiforgory = antiforgery;
+            _antiforgery = antiforgery;
+            GlobalAntiforgery = antiforgery;
         }
+
         [HttpPost]
         [Route("api/create-user")]
         public async Task<ActionResult> Register([FromBody] UserDto newUser)
@@ -50,29 +54,38 @@ namespace Backend.Controllers
                 return Ok();
             }
         }
+
         [HttpPost]
         [Route("api/login")]
         public async Task<ActionResult> Login([FromBody] UserDto user)
         {
-            //await _antiforgory.ValidateRequestAsync(HttpContext);
-            if (!s_isLoaded)
+            try
             {
-                await LoadData();
+                await _antiforgery.ValidateRequestAsync(HttpContext);
+                if (!s_isLoaded)
+                {
+                    await LoadData();
+                }
+                User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
+                if (loggedUser == null)
+                    return BadRequest("User not found!");
+                if (VerifyPassword(user.Password, loggedUser.PasswordHash, loggedUser.PasswordSalt))
+                {
+                    string token = CreateToken(loggedUser);
+                    var refreshToken = CreateRefreshToken();
+                    SetRefreshToken(refreshToken, loggedUser.Id);
+                    await SaveData();
+                    return Ok(token);
+                }
+                else
+                    return BadRequest("Wrong password!");
             }
-            User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
-            if (loggedUser == null)
-                return BadRequest("User not found!");
-            if (VerifyPassword(user.Password, loggedUser.PasswordHash, loggedUser.PasswordSalt))
+            catch (Exception ex)
             {
-                string token = CreateToken(loggedUser);
-                var refreshToken = CreateRefreshToken();
-                SetRefreshToken(refreshToken, loggedUser.Id);
-                await SaveData();
-                return Ok(token);
+                return BadRequest(ex.Message);
             }
-            else
-                return BadRequest("Wrond password!");
         }
+
         [HttpPost]
         [Route("api/refresh-token/{id}"), AllowAnonymous]
         public async Task<ActionResult<string>> RefreshToken([FromBody] string rT, Guid id)
@@ -96,6 +109,7 @@ namespace Backend.Controllers
                 return Ok(token);
             }
         }
+
         [HttpPost]
         [Route("api/get-rt")]
         public async Task<ActionResult<RefreshToken>> GetRefreshToken([FromBody] UserDto user)
@@ -114,6 +128,7 @@ namespace Backend.Controllers
             else
                 return BadRequest("Invalid user data!");
         }
+
         [HttpPost]
         [Route("api/get-id")]
         public async Task<ActionResult<RefreshToken>> GetUserId([FromBody] UserDto user)
@@ -132,6 +147,15 @@ namespace Backend.Controllers
             else
                 return BadRequest("Invalid user data!");
         }
+
+        [HttpGet]
+        [Route("api/antiforgery")]
+        public void GetAntiforgery()
+        {
+            var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
+            HttpContext.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!, new CookieOptions { HttpOnly = false });
+        }
+
         private RefreshToken CreateRefreshToken()
         {
             var refreshToken = new RefreshToken
@@ -142,6 +166,7 @@ namespace Backend.Controllers
             };
             return refreshToken;
         }
+
         async private void SetRefreshToken(RefreshToken newRT, Guid id)
         {
             if (!s_isLoaded)
@@ -159,6 +184,7 @@ namespace Backend.Controllers
             loggedUser.TimeExpires = newRT.TimeExpires;
             await SaveData();
         }
+
         private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
             using (var hmac = new HMACSHA512())
@@ -167,6 +193,7 @@ namespace Backend.Controllers
                 passwordHash = hmac.ComputeHash(ASCIIEncoding.UTF8.GetBytes(password));
             }
         }
+
         private bool VerifyPassword(string password, byte[] passwordHash, byte[] passwordSalt)
         {
             using (var hmac = new HMACSHA512(passwordSalt))
@@ -175,6 +202,7 @@ namespace Backend.Controllers
                 return computedHash.SequenceEqual(passwordHash);
             }
         }
+
         private async Task LoadData()
         {
             while (!s_isLoaded)
@@ -192,6 +220,7 @@ namespace Backend.Controllers
                 }
             }
         }
+
         private async Task SaveData()
         {
             while (true)
@@ -210,6 +239,7 @@ namespace Backend.Controllers
                 }
             }
         }
+
         private string CreateToken(User user)
         {
             List<Claim> claims = new List<Claim>

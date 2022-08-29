@@ -7,7 +7,6 @@ namespace Client.Pages
     {
         public void OnGet()
         {
-
         }
     }
 }

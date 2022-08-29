@@ -6,6 +6,7 @@ using System.Text;
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: MyAllowSpecificOrigins,
@@ -15,7 +16,7 @@ builder.Services.AddCors(options =>
                                 "https://localhost:7024")
                                 .AllowAnyHeader()
                                 .AllowAnyMethod()
-                                .AllowAnyOrigin();
+                                .AllowCredentials();
         });
 });
 // Add services to the container.
@@ -29,7 +30,7 @@ builder.Services.AddSwaggerGen(s =>
     {
         Version = "v1",
         Title = "Recipe API",
-        Description = "Api for exercise-3"
+        Description = "Api for exercise-6"
     });
 });
 builder.Services.AddMvc();
@@ -47,7 +48,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew = TimeSpan.Zero
         };
     });
-builder.Services.AddAntiforgery(options => options.HeaderName = "requestverificationtoken");
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

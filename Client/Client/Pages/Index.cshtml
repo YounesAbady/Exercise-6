@@ -69,6 +69,7 @@
                     }
                     async function login(user) {
                         let url = '@baseAdress' + 'login';
+                        var antiforgery = await getToken();
                         user = {
                             'Username': user.username,
                             'Password': user.password
@@ -77,8 +78,9 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                RequestVerificationToken: document.getElementById("RequestVerificationToken").value
+                                "X-XSRF-TOKEN": antiforgery
                             },
+                            credentials: 'include',
                             body: JSON.stringify(user)
                         })
                             .then(res => { return res })
@@ -226,11 +228,11 @@
         <!--Nav Bar-->
 
         <header>
-            <nav class="container row navbar navbar-expand-lg" style="height:60px;">
-                <div class="container-fluid" style="position:relative">
+            <nav class="row navbar navbar-expand" style="height:60px;width:100%">
+                <div class="container-fluid">
                     <div class="collapse navbar-collapse" id="navbarColor03">
-                        <ul class="navbar-nav me-auto">
-                            <li class="col" style="margin-top:30px;">
+                        <ul class="navbar-nav">
+                            <li style="margin-top:30px">
                                 <div class="logo-holder logo-5">
                                     <a x-on:click="expandRecipe=false;expandCategory=false;" class="nav-link text-light">
                                         <h3>Yum</h3>
@@ -238,15 +240,13 @@
                                     </a>
                                 </div>
                             </li>
-                            <li class="col" style="position:absolute;right:0;">
-                                <div style="width:max-content;margin-top:40px;">
-                                    <a onClick="window.location.reload();"
-                                       class="btn btn-outline-dark" style="color:#66FCF1">
-                                        <span class="glyphicon glyphicon-log-out"></span> Log out
-                                    </a>
-                                </div>
-                            </li>
                         </ul>
+                        <div class="ms-auto">
+                            <a onClick="window.location.reload();"
+                               class="btn btn-outline-dark" style="color:#66FCF1">
+                                <span class="glyphicon glyphicon-log-out"></span> Log out
+                            </a>
+                        </div>
                     </div>
                 </div>
             </nav>
@@ -254,27 +254,63 @@
 
         <!--Home-->
 
-        <div class="container row row-cols-3 row-cols-md-3 g-3 text-center align-items-center" style="align-content:center">
-            <div class="col" style="margin-left:225px;margin-top:25px;border-style:groove;border-color:#66FCF1">
-                <div id="carouselExampleSlidesOnly" class="carousel slide" data-bs-ride="carousel">
-                    <div class="carousel-inner">
-                        <div class="carousel-item active">
-                            <img src="~/Pictures/Food1.jpg" class="d-block w-100" style="height:350px;">
-                        </div>
-                        <div class="carousel-item">
-                            <img src="~/Pictures/Food2.jpg" class="d-block w-100" style="height:350px;">
-                        </div>
-                        <div class="carousel-item">
-                            <img src="~/Pictures/Food3.jpg" class="d-block w-100" style="height:350px;">
+        <div class="container text-center">
+            <div class="row row-cols-1 row-cols-md-2 g-3 m-auto" style="grid-column-gap:200px">
+                <div class="col col-sm-5" style="border-style:groove;border-color:#66FCF1;">
+                    <div id="carouselExampleSlidesOnly" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner">
+                            <div class="carousel-item active">
+                                <img src="~/Pictures/Food1.jpg" class="d-block w-100" style="height:350px;">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="~/Pictures/Food2.jpg" class="d-block w-100" style="height:350px;">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="~/Pictures/Food3.jpg" class="d-block w-100" style="height:350px;">
+                            </div>
                         </div>
                     </div>
+                    <div>
+                        <h4 style="color:#C5C6C7;text-align:center;margin-top:15px;font-family:'Square Peg',cursive;">cook what you love</h4>
+                        <a x-on:click="recipes = await listRecipes();expandRecipe= !expandRecipe;expandCategory=false;scroll('recipe')" style="background-color:#1F2833;color:#C5C6C7;margin-top:25px;" class="btn m-2">Recipes</a>
+                        <a id="scrollRecipe" href="#autoScroll" hidden></a>
+                        <script>
+                            async function listRecipes() {
+                                let url = '@baseAdress' + 'list-recipes';
+                                const response = await fetch(url, {
+                                    method: 'GET',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + window.logged
+                                    }
+                                })
+                                    .then(res => { return res })
+                                if (response.ok)
+                                    return response.json();
+                            }
+                        </script>
+                    </div>
                 </div>
-                <div>
-                    <h4 style="color:#C5C6C7;text-align:center;margin-top:15px;font-family:'Square Peg',cursive;">cook what you love</h4>
-                    <button x-on:click="recipes = await listRecipes();expandRecipe= !expandRecipe;expandCategory=false" style="background-color:#1F2833;color:#C5C6C7;margin-top:25px;" class="btn">Recipes</button>
+                <div class="col col-sm-5" style="border-style:groove;border-color:#66FCF1">
+                    <div id="carouselExampleSlidesOnly" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner">
+                            <div class="carousel-item active">
+                                <img src="~/Pictures/Cat1.jpg" class="d-block w-100" style="height:350px;">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="~/Pictures/Cat2.jpg" class="d-block w-100" style="height:350px;">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="~/Pictures/Cat3.jpg" class="d-block w-100" style="height:350px;">
+                            </div>
+                        </div>
+                    </div>
+                    <h4 style="color:#C5C6C7;text-align:center;margin-top:15px;font-family:'Square Peg',cursive;">discover different cultures</h4>
+                    <a x-on:click="categories = await listCategories();expandCategory= !expandCategory;expandRecipe=false;scroll('category')" style="background-color:#1F2833;color:#C5C6C7;margin-top:25px" class="btn m-2">Categories</a>
+                    <a id="scrollCategory" href="#autoScrollCategories" hidden></a>
                     <script>
-                        async function listRecipes() {
-                            let url = '@baseAdress' + 'list-recipes/';
+                        async function listCategories() {
+                            let url = '@baseAdress' + 'list-categories';
                             const response = await fetch(url, {
                                 method: 'GET',
                                 headers: {
@@ -291,53 +327,19 @@
                     </script>
                 </div>
             </div>
-            <div class="col" style="margin-left:200px;margin-top:25px;border-style:groove;border-color:#66FCF1">
-                <div id="carouselExampleSlidesOnly" class="carousel slide" data-bs-ride="carousel">
-                    <div class="carousel-inner">
-                        <div class="carousel-item active">
-                            <img src="~/Pictures/Cat1.jpg" class="d-block w-100" style="height:350px;">
-                        </div>
-                        <div class="carousel-item">
-                            <img src="~/Pictures/Cat2.jpg" class="d-block w-100" style="height:350px;">
-                        </div>
-                        <div class="carousel-item">
-                            <img src="~/Pictures/Cat3.jpg" class="d-block w-100" style="height:350px;">
-                        </div>
-                    </div>
-                </div>
-                <h4 style="color:#C5C6C7;text-align:center;margin-top:15px;font-family:'Square Peg',cursive;">discover different cultures</h4>
-                <button x-on:click="categories = await listCategories();expandCategory= !expandCategory;expandRecipe=false" style="background-color:#1F2833;color:#C5C6C7;margin-top:25px" class="btn">Categories</button>
-                <script>
-                    async function listCategories() {
-                        let url = '@baseAdress' + 'list-categories';
-                        const response = await fetch(url, {
-                            method: 'GET',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                RequestVerificationToken:
-                                    document.getElementById("RequestVerificationToken").value,
-                                'Authorization': 'Bearer ' + window.logged
-                            }
-                        })
-                            .then(res => { return res })
-                        if (response.ok)
-                            return response.json();
-                    }
-                </script>
-            </div>
         </div>
 
         <!--List Categories-->
 
         <div x-data="{ expandCreate:false, chosenCategory:'', expandDelete:false, expandEdit:false,position:-1,deleted:null,newCategory:'' }" x-show="expandCategory" x-cloak x-transition>
-            <div class="row row-cols-1 row-cols-md-3 g-2 text-center">
+            <div class="row row-cols-1 row-cols-md-3 g-2 text-center" id="autoScrollCategories">
                 <template x-for="(category, index) in categories">
                     <div>
                         <div class="col">
                             <div class="card h-100 text-center" style="border:groove;border-color:#66FCF1;background-color:transparent;margin-left:2px;margin-top:50px;">
                                 <div class="card-body">
                                     <h5 x-text="category" class="card-title" style="color:white"></h5>
-                                    <a x-on:click="chosenCategory= category ;position=index+1;expandEdit= !expandEdit;expandDelete=false;expandCreate=false" class="btn btn-dark" style="background-color:#1F2833;color:#C5C6C7;margin-top:10px;"><i class="bi bi-pencil-square" style="font-style:normal"> Edit</i></a>
+                                    <a x-on:click="chosenCategory= category ;position=index+1;expandDelete=false;expandCreate=false" class="btn btn-dark" style="background-color:#1F2833;color:#C5C6C7;margin-top:10px;" data-bs-toggle="modal" data-bs-target="#editCategory"><i class="bi bi-pencil-square" style="font-style:normal"> Edit</i></a>
                                     <a x-on:click="chosenCategory= category ;" class="btn btn-danger" style="color:white;margin-top:10px;" data-bs-toggle="modal" data-bs-target="#deleteCategoryModal"><i class="bi bi-trash" style="font-style:normal"> Delete</i></a>
                                 </div>
                             </div>
@@ -345,43 +347,65 @@
                     </div>
                 </template>
             </div>
+            <div class="text-center m-4">
+                <button x-data="{created :false}" x-on:click="expandEdit=false;expandDelete=false;newCategory=''" style="background-color:#252f3e;color:white;" class="btn text-center" data-bs-toggle="modal" data-bs-target="#createCategory"><i class="bi bi-plus-circle" style="font-style:normal"> Create Category</i></button>
+            </div>
 
             <!--Create Category-->
 
-            <button x-data="{created :false}" x-on:click="expandCreate = ! expandCreate;expandEdit=false;expandDelete=false;newCategory=''" style="background-color:#252f3e;color:white;margin-top:50px;margin-left:45%" class="btn text-center"><i class="bi bi-plus-circle" style="font-style:normal"> Create Category</i></button>
-
-            <div x-show="expandCreate" x-cloak x-transition>
-                <form class="align-content-center col-6 needs-validation" style="margin:auto;text-align:center;margin-top:50px;color:#1A2238" novalidate>
-                    <input x-model="newCategory" placeholder="Enter category name" type="text" required />
-                    <div class="valid-feedback" style="font-size:large">
-                        Looks good!
+            <div class="modal fade" id="createCategory" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="staticBackdropLabel" style="color:black">New Category</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form class="align-content-center col-6 needs-validation" style="margin:auto;text-align:center;margin-top:50px;color:#1A2238" novalidate>
+                                <input x-model="newCategory" placeholder="Enter category name" type="text" required />
+                                <div class="valid-feedback" style="font-size:large">
+                                    Looks good!
+                                </div>
+                                <div class="invalid-feedback" style="font-size:large">
+                                    Cant be empty.
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer m-auto">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" x-on:click="created=await createCategory(newCategory);expandCreate= !created;fire(created,'Created successfully');newCategory='';categories=await listCategories()" class="btn btn-success text-center isWorking" style="font-style:normal" data-bs-dismiss="modal" disabled> Add</button>
+                        </div>
                     </div>
-                    <div class="invalid-feedback" style="font-size:large">
-                        Cant be empty.
-                    </div>
-                    <button type="button" x-on:click="created=await createCategory(newCategory);expandCreate= !created;fire(created,'Created successfully');newCategory='';categories=await listCategories();" class="btn btn-success text-center isWorking" style="font-style:normal" disabled> Add</button>
-                </form>
-                <script>
-                    async function createCategory(category) {
-                        let url = '@baseAdress' + 'add-category';
-                        const response = await fetch(url, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                RequestVerificationToken:
-                                    document.getElementById("RequestVerificationToken").value,
-                                'Authorization': 'Bearer ' + window.logged
-                            },
-                            body: JSON.stringify(category)
-                        })
-                            .then(res => { return res })
-                        if (response.ok)
-                            return true;
-                        else
-                            return false;
-                    }
-                </script>
+                </div>
             </div>
+            <script>
+                async function createCategory(category) {
+                    let url = '@baseAdress' + 'add-category';
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            RequestVerificationToken:
+                                document.getElementById("RequestVerificationToken").value,
+                            'Authorization': 'Bearer ' + window.logged
+                        },
+                        body: JSON.stringify(category)
+                    })
+                        .then(res => { return res })
+                    if (response.ok) {
+                        scroll('category');
+                        return true;
+                    }
+                    else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: await response.text(),
+                            showConfirmButton: false,
+                            timer: 1500
+                        })
+                    }
+                }
+            </script>
 
             <!--Delete Category-->
 
@@ -418,8 +442,10 @@
                         body: JSON.stringify(category)
                     })
                         .then(res => { return res })
-                    if (response.ok)
+                    if (response.ok) {
+                        scroll('category');
                         return true;
+                    }
                     else
                         return false;
                 }
@@ -427,48 +453,62 @@
 
             <!--Edit Category-->
 
-            <div x-show="expandEdit" x-data="{ edited:false }" x-cloak x-transition>
-                <form method="post" class="align-content-center col-6 needs-validation" style="margin:auto;text-align:center;margin-top:50px;color:#1A2238" novalidate>
-                    <input x-model="chosenCategory" type="text" required />
-                    <div class="valid-feedback" style="font-size:large">
-                        Looks good!
+            <div class="modal fade" id="editCategory" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="staticBackdropLabel" style="color:black">Edit Category</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form method="post" class="align-content-center col-6 needs-validation" style="margin:auto;text-align:center;margin-top:50px;color:#1A2238" novalidate>
+                                <input x-model="chosenCategory" type="text" required />
+                                <div class="valid-feedback" style="font-size:large">
+                                    Looks good!
+                                </div>
+                                <div class="invalid-feedback" style="font-size:large">
+                                    Cant be empty.
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer m-auto">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" x-on:click="edited = await editCategory(position,chosenCategory);expandEdit= !edited;fire(edited,'Edited Successfully');categories = await listCategories();" class="btn btn-success isWorking" style="font-style:normal" data-bs-dismiss="modal"> Edit</button>
+                        </div>
                     </div>
-                    <div class="invalid-feedback" style="font-size:large">
-                        Cant be empty.
-                    </div>
-                    <button type="button" x-on:click="edited = await editCategory(position,chosenCategory);expandEdit= !edited;fire(edited,'Edited Successfully');categories = await listCategories();" class="btn btn-success isWorking" style="font-style:normal"> Edit</button>
-                </form>
-                <script>
-                    async function editCategory(position, newCategory) {
-                        let url = '@baseAdress' + 'update-category/' + position;
-                        const response = await fetch(url, {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                RequestVerificationToken:
-                                    document.getElementById("RequestVerificationToken").value,
-                                'Authorization': 'Bearer ' + window.logged
-                            },
-                            body: JSON.stringify(newCategory)
-                        })
-                            .then(res => { return res })
-                        if (response.ok)
-                            return true;
-                        else
-                            return false;
-                    }
-                </script>
+                </div>
             </div>
-
+            <script>
+                async function editCategory(position, newCategory) {
+                    let url = '@baseAdress' + 'update-category/' + position;
+                    const response = await fetch(url, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            RequestVerificationToken:
+                                document.getElementById("RequestVerificationToken").value,
+                            'Authorization': 'Bearer ' + window.logged
+                        },
+                        body: JSON.stringify(newCategory)
+                    })
+                        .then(res => { return res })
+                    if (response.ok) {
+                        scroll('category');
+                        return true;
+                    }
+                    else
+                        return false;
+                }
+            </script>
         </div>
 
         <!--List Recipes-->
 
         <div x-data="{ expandCreate:false, chosenRecipe:{Title:'', Ingredients:[], Instructions:[], Categories:[]}, expandDelete:false, expandEdit:false, ing:'' , ins:'',editIngredients:'' , editInstructions:'',deleteId:'' }" x-show="expandRecipe" x-cloak x-transition>
-            <div class="row row-cols-1 row-cols-md-4 g-2 text-center">
+            <div class="row row-cols-1 row-cols-md-4 g-2 m-auto text-center" id="autoScroll">
                 <template x-for="recipe in recipes">
                     <div class="col">
-                        <div class="card h-100 text-center" style="background-color:transparent;margin-left:2px;margin-top:50px;margin-right:50px;margin-bottom:25px;border:groove;border-color:#66FCF1;">
+                        <div class="card h-100 text-center m-3" style="background-color:transparent;border:groove;border-color:#66FCF1;">
                             <div class="card-body">
                                 <h5 x-text="recipe.title" class="card-title" style="color:white"></h5>
                                 <div x-data="{ expanded: false }">
@@ -492,119 +532,141 @@
                                     </template>
                                 </div>
                                 <br>
-                                <a x-on:click="chosenRecipe.title=recipe.title;chosenRecipe.id=recipe.id;chosenRecipe.ingredients=recipe.ingredients;chosenRecipe.instructions=recipe.instructions;chosenRecipe.categories=recipe.categories;[chosenRecipe,editIngredients,editInstructions]=adjustEdit(chosenRecipe,editIngredients,editInstructions);expandEdit= !expandEdit;expandDelete=false;expandCreate=false;toast(expandEdit);categories = await listCategories()" class="btn btn-dark" style="background-color:#1F2833;color:#C5C6C7;margin-top:10px;font-style:normal"><i class="bi bi-pencil-square" style="font-style:normal"> Edit</i></a>
+                                <a x-on:click="chosenRecipe.title=recipe.title;chosenRecipe.id=recipe.id;chosenRecipe.ingredients=recipe.ingredients;chosenRecipe.instructions=recipe.instructions;chosenRecipe.categories=recipe.categories;[chosenRecipe,editIngredients,editInstructions]=adjustEdit(chosenRecipe,editIngredients,editInstructions);expandDelete=false;expandCreate=false;toast(expandEdit);categories = await listCategories()" class="btn btn-dark" style="background-color:#1F2833;color:#C5C6C7;margin-top:10px;font-style:normal" data-bs-toggle="modal" data-bs-target="#editRecipe"><i class="bi bi-pencil-square" style="font-style:normal"> Edit</i></a>
                                 <a x-on:click="deleteId=recipe.id" class="btn btn-danger" style="color:white;margin-top:10px;font-style:normal" data-bs-toggle="modal" data-bs-target="#deleteRecipeModal"><i class="bi bi-trash" style="font-style:normal"> Delete</i></a>
                             </div>
                         </div>
                     </div>
                 </template>
             </div>
-            <button x-on:click="expandCreate = ! expandCreate;expandDelete=false;expandEdit=false;categories = await listCategories();[chosenRecipe,ing,ins]=clear(chosenRecipe,ing,ins)" style="background-color:#252f3e;color:white;margin-top:75px;margin-left:45%" class="btn text-center"><i class="bi bi-plus-circle" style="font-style:normal"> Create Recipe</i></button>
+            <div class="text-center m-4">
+                <button x-on:click="expandDelete=false;expandEdit=false;categories = await listCategories();[chosenRecipe,ing,ins]=clear(chosenRecipe,ing,ins)" style="background-color:#252f3e;color:white;" class="btn" data-bs-toggle="modal" data-bs-target="#createRecipe"><i class="bi bi-plus-circle" style="font-style:normal"> Create Recipe</i></button>
+            </div>
 
             <!--Create Recipe-->
 
-            <div x-show="expandCreate" x-cloak x-transition x-data="{created:false}">
-                <form method="post" class="align-content-center col-6 needs-validation" style="margin:auto;text-align:center;margin-top:50px;color:#66FCF1" novalidate>
-                    <div>
-                        <div class="row mt-4 col-11 m-auto">
-                            <label style="text-align:left">Recipe Title</label>
-                            <input class="form-control" x-model="chosenRecipe.Title" required>
-                            <div class="valid-feedback" style="font-size:large">
-                                Looks good!
-                            </div>
-                            <div class="invalid-feedback" style="font-size:large">
-                                Cant be empty.
-                            </div>
+            <div class="modal fade" id="createRecipe" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="staticBackdropLabel" style="color:black">Create Recipe</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="row mt-4 col-11 m-auto">
-                            <label style="text-align:left">Ingredients</label>
-                            <textarea class="form-control resize" x-model="ing" placeholder="After every ingredient press enter for new line." rows="5" cols="30" required></textarea>
-                            <div class="valid-feedback" style="font-size:large">
-                                Looks good!
-                            </div>
-                            <div class="invalid-feedback" style="font-size:large">
-                                Cant be empty.
-                            </div>
-                        </div>
-                        <div class="row mt-4 col-11 m-auto">
-                            <label style="text-align:left">Instructions</label>
-                            <textarea class="form-control resize" x-model="ins" placeholder="After every instructions press enter for new line." rows="5" cols="30" required></textarea>
-                            <div class="valid-feedback" style="font-size:large">
-                                Looks good!
-                            </div>
-                            <div class="invalid-feedback" style="font-size:large">
-                                Cant be empty.
-                            </div>
-                        </div>
-                        <div class="row mt-4 col-11 m-auto">
-                            <form method="post">
-                                <label style="text-align:left">Choose one or more category</label>
-                                <br>
-                                <select class="form-control" x-model="chosenRecipe.Categories" multiple style="color:black" required>
-                                    <template x-for="cat in categories">
-                                        <option x-model="cat" value="cat" x-text="cat"></option>
-                                    </template>
-                                </select>
-                                <div class="valid-feedback" style="font-size:large">
-                                    Looks good!
+                        <div class="modal-body">
+                            <form method="post" class="align-content-center col-6 needs-validation" style="margin:auto;text-align:center;margin-top:50px;color:black" novalidate>
+                                <div>
+                                    <div class="row mt-4 col-11 m-auto">
+                                        <label style="text-align:left">Recipe Title</label>
+                                        <input class="form-control" x-model="chosenRecipe.Title" required>
+                                        <div class="valid-feedback" style="font-size:large">
+                                            Looks good!
+                                        </div>
+                                        <div class="invalid-feedback" style="font-size:large">
+                                            Cant be empty.
+                                        </div>
+                                    </div>
+                                    <div class="row mt-4 col-11 m-auto">
+                                        <label style="text-align:left">Ingredients</label>
+                                        <textarea class="form-control resize" x-model="ing" placeholder="After every ingredient press enter for new line." rows="5" cols="30" required></textarea>
+                                        <div class="valid-feedback" style="font-size:large">
+                                            Looks good!
+                                        </div>
+                                        <div class="invalid-feedback" style="font-size:large">
+                                            Cant be empty.
+                                        </div>
+                                    </div>
+                                    <div class="row mt-4 col-11 m-auto">
+                                        <label style="text-align:left">Instructions</label>
+                                        <textarea class="form-control resize" x-model="ins" placeholder="After every instructions press enter for new line." rows="5" cols="30" required></textarea>
+                                        <div class="valid-feedback" style="font-size:large">
+                                            Looks good!
+                                        </div>
+                                        <div class="invalid-feedback" style="font-size:large">
+                                            Cant be empty.
+                                        </div>
+                                    </div>
+                                    <div class="row mt-4 col-11 m-auto">
+                                        <form method="post">
+                                            <label style="text-align:left">Choose one or more category</label>
+                                            <br>
+                                            <select class="form-control" x-model="chosenRecipe.Categories" multiple style="color:black" required>
+                                                <template x-for="cat in categories">
+                                                    <option x-model="cat" value="cat" x-text="cat"></option>
+                                                </template>
+                                            </select>
+                                            <div class="valid-feedback" style="font-size:large">
+                                                Looks good!
+                                            </div>
+                                            <div class="invalid-feedback" style="font-size:large">
+                                                Cant be empty.
+                                            </div>
+                                            <p style="font-weight:bold">Hold down the Ctrl (windows) or Command (Mac) button to select multiple options.</p>
+                                        </form>
+                                    </div>
+                                    <br><br>
                                 </div>
-                                <div class="invalid-feedback" style="font-size:large">
-                                    Cant be empty.
-                                </div>
-                                <p style="font-weight:bold">Hold down the Ctrl (windows) or Command (Mac) button to select multiple options.</p>
                             </form>
                         </div>
-                        <button x-on:click="chosenRecipe= adjustRecipe(chosenRecipe,ing,ins);created=await createRecipe(chosenRecipe);recipes = await listRecipes();fire(created,'Created successfully');expandCreate=!created;" type="button" class="btn btn-success isWorking" disabled><i class="bi bi-plus-circle-fill" style="font-style:normal"> Create Recipe</i></button>
-                        <br><br>
+                        <div class="modal-footer m-auto">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button x-on:click="chosenRecipe= adjustRecipe(chosenRecipe,ing,ins);created=await createRecipe(chosenRecipe);recipes = await listRecipes();fire(created,'Created successfully');expandCreate=!created;" type="button" class="btn btn-success isWorking" data-bs-dismiss="modal" disabled><i class="bi bi-plus-circle-fill" style="font-style:normal"> Create Recipe</i></button>
+                        </div>
                     </div>
-                </form>
-
-                <script>
-                    async function createRecipe(recipe) {
-                        recipe = {
-                            'Title': recipe.Title,
-                            'Ingredients': recipe.Ingredients,
-                            'Instructions': recipe.Instructions,
-                            'Categories': recipe.Categories
-                        }
-                        let url = '@baseAdress' + 'add-recipe';
-                        const response = await fetch(url, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                RequestVerificationToken:
-                                    document.getElementById("RequestVerificationToken").value,
-                                'Authorization': 'Bearer ' + window.logged
-                            },
-                            body: JSON.stringify(recipe)
-                        })
-                            .then(res => { return res })
-                        if (response.ok)
-                            return true;
-                        else
-                            return false;
-                    }
-                    function adjustRecipe(chosenRecipe, ing, ins) {
-                        ing = ing.trim();
-                        ins = ins.trim();
-                        ing = ing.replaceAll('/', '-');
-                        ins = ins.replaceAll('/', '-');
-                        chosenRecipe.Ingredients = ing.split('\n');
-                        chosenRecipe.Instructions = ins.split('\n');
-                        return chosenRecipe;
-                    }
-                    function clear(chosenRecipe, ing, ins) {
-                        ing = '';
-                        ins = '';
-                        chosenRecipe.Title = '';
-                        chosenRecipe.Categories = [];
-                        chosenRecipe.ingredients = [];
-                        chosenRecipe.Instructions = [];
-                        return [chosenRecipe, ing, ins];
-                    }
-                </script>
-
+                </div>
             </div>
+
+            <script>
+                async function createRecipe(recipe) {
+                    recipe = {
+                        'Title': recipe.Title,
+                        'Ingredients': recipe.Ingredients,
+                        'Instructions': recipe.Instructions,
+                        'Categories': recipe.Categories
+                    }
+                    let url = '@baseAdress' + 'add-recipe';
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            RequestVerificationToken:
+                                document.getElementById("RequestVerificationToken").value,
+                            'Authorization': 'Bearer ' + window.logged
+                        },
+                        body: JSON.stringify(recipe)
+                    })
+                        .then(res => { return res })
+                    if (response.ok) {
+                        scroll('recipe');
+                        return true;
+                    }
+                    else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: await response.text(),
+                            showConfirmButton: false,
+                            timer: 1500
+                        })
+                    }
+                }
+                function adjustRecipe(chosenRecipe, ing, ins) {
+                    ing = ing.trim();
+                    ins = ins.trim();
+                    ing = ing.replaceAll('/', '-');
+                    ins = ins.replaceAll('/', '-');
+                    chosenRecipe.Ingredients = ing.split('\n');
+                    chosenRecipe.Instructions = ins.split('\n');
+                    return chosenRecipe;
+                }
+                function clear(chosenRecipe, ing, ins) {
+                    ing = '';
+                    ins = '';
+                    chosenRecipe.Title = '';
+                    chosenRecipe.Categories = [];
+                    chosenRecipe.ingredients = [];
+                    chosenRecipe.Instructions = [];
+                    return [chosenRecipe, ing, ins];
+                }
+            </script>
 
             <!--Delete Recipe-->
 
@@ -641,8 +703,10 @@
                         body: JSON.stringify(id)
                     })
                         .then(res => { return res })
-                    if (response.ok)
+                    if (response.ok) {
+                        scroll('recipe');
                         return true;
+                    }
                     else
                         return false;
                 }
@@ -677,128 +741,143 @@
                 </script>
             </div>
 
-            <div x-show="expandEdit" x-cloak x-transition x-data="{ edited:false }">
-                <form method="post" class="align-content-center col-6 needs-validation validate" style="margin:auto;text-align:center;margin-top:50px;color:#66FCF1" novalidate>
-                    <input x-model="chosenRecipe.id" hidden>
-                    <div>
-                        <div class="row mt-4 col-11 m-auto">
-                            <label style="text-align:left">Recipe Title</label>
-                            <input x-model="chosenRecipe.title" class="form-control" required>
-                            <div class="valid-feedback" style="font-size:large">
-                                Looks good!
-                            </div>
-                            <div class="invalid-feedback" style="font-size:large">
-                                Cant be empty.
-                            </div>
+            <div class="modal fade" id="editRecipe" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="staticBackdropLabel" style="color:black">Edit Recipe</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="row mt-4 col-11 m-auto">
-                            <label style="text-align:left">Ingredients</label>
-                            <textarea class="form-control resize" x-model="editIngredients" placeholder="separate between ingredients with a ," rows="5" cols="30" required></textarea>
-                            <div class="valid-feedback" style="font-size:large">
-                                Looks good!
-                            </div>
-                            <div class="invalid-feedback" style="font-size:large">
-                                Cant be empty.
-                            </div>
-                        </div>
-                        <div class="row mt-4 col-11 m-auto">
-                            <label style="text-align:left">Instructions</label>
-                            <textarea class="form-control resize" x-model="editInstructions" placeholder="separate between instructions with a ," rows="5" cols="30" required></textarea>
-                            <div class="valid-feedback" style="font-size:large">
-                                Looks good!
-                            </div>
-                            <div class="invalid-feedback" style="font-size:large">
-                                Cant be empty.
-                            </div>
-                        </div>
-                        <div class="row mt-4 col-11 m-auto">
-                            <form method="post">
-                                <label style="font:bolder;text-align:left" class="fw-bold">Choose one or more category</label>
-                                <br>
-                                <select class="form-control" x-model="chosenRecipe.categories" multiple style="color:black" required>
-                                    <template x-for="cat in categories">
-                                        <option x-model="cat" value="cat" x-text="cat"></option>
-                                    </template>
-                                </select>
-                                <p style="font-weight:bolder">Hold down the Ctrl (windows) or Command (Mac) button to select multiple options.</p>
-                                <div class="valid-feedback" style="font-size:large">
-                                    Looks good!
-                                </div>
-                                <div class="invalid-feedback" style="font-size:large">
-                                    Cant be empty.
+                        <div class="modal-body">
+                            <form method="post" class="align-content-center col-6 needs-validation validate" style="margin:auto;text-align:center;margin-top:50px;color:black" novalidate>
+                                <input x-model="chosenRecipe.id" hidden>
+                                <div>
+                                    <div class="row mt-4 col-11 m-auto">
+                                        <label style="text-align:left">Recipe Title</label>
+                                        <input x-model="chosenRecipe.title" class="form-control" required>
+                                        <div class="valid-feedback" style="font-size:large">
+                                            Looks good!
+                                        </div>
+                                        <div class="invalid-feedback" style="font-size:large">
+                                            Cant be empty.
+                                        </div>
+                                    </div>
+                                    <div class="row mt-4 col-11 m-auto">
+                                        <label style="text-align:left">Ingredients</label>
+                                        <textarea class="form-control resize" x-model="editIngredients" placeholder="separate between ingredients with a ," rows="5" cols="30" required></textarea>
+                                        <div class="valid-feedback" style="font-size:large">
+                                            Looks good!
+                                        </div>
+                                        <div class="invalid-feedback" style="font-size:large">
+                                            Cant be empty.
+                                        </div>
+                                    </div>
+                                    <div class="row mt-4 col-11 m-auto">
+                                        <label style="text-align:left">Instructions</label>
+                                        <textarea class="form-control resize" x-model="editInstructions" placeholder="separate between instructions with a ," rows="5" cols="30" required></textarea>
+                                        <div class="valid-feedback" style="font-size:large">
+                                            Looks good!
+                                        </div>
+                                        <div class="invalid-feedback" style="font-size:large">
+                                            Cant be empty.
+                                        </div>
+                                    </div>
+                                    <div class="row mt-4 col-11 m-auto">
+                                        <form method="post">
+                                            <label style="font:bolder;text-align:left" class="fw-bold">Choose one or more category</label>
+                                            <br>
+                                            <select class="form-control" x-model="chosenRecipe.categories" multiple style="color:black" required>
+                                                <template x-for="cat in categories">
+                                                    <option x-model="cat" value="cat" x-text="cat"></option>
+                                                </template>
+                                            </select>
+                                            <p style="font-weight:bolder">Hold down the Ctrl (windows) or Command (Mac) button to select multiple options.</p>
+                                            <div class="valid-feedback" style="font-size:large">
+                                                Looks good!
+                                            </div>
+                                            <div class="invalid-feedback" style="font-size:large">
+                                                Cant be empty.
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <br>
                                 </div>
                             </form>
                         </div>
-                        <br>
-                        <button x-on:click="chosenRecipe=adjust(chosenRecipe,editIngredients,editInstructions);edited=await updateRecipe(chosenRecipe,chosenRecipe.id);expandEdit= !edited;recipes=await listRecipes();fire(edited,'Edited successfully')" type="button" class="btn btn-success isWorking" style="font-style:normal"> Edit</button>
+                        <div class="modal-footer m-auto">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button x-on:click="chosenRecipe=adjust(chosenRecipe,editIngredients,editInstructions);edited=await updateRecipe(chosenRecipe,chosenRecipe.id);expandEdit= !edited;recipes=await listRecipes();fire(edited,'Edited successfully')" type="button" class="btn btn-success isWorking" style="font-style:normal" data-bs-dismiss="modal"> Edit</button>
+                        </div>
                     </div>
-                </form>
-                <script>
-                    async function updateRecipe(jsonRecipe, id) {
-                        jsonRecipe = {
-                            'Id': jsonRecipe.Id,
-                            'Title': jsonRecipe.Title,
-                            'Ingredients': jsonRecipe.Ingredients,
-                            'Instructions': jsonRecipe.Instructions,
-                            'Categories': jsonRecipe.Categories
-                        }
-                        let url = '@baseAdress' + 'update-recipe/' + id;
-                        const response = await fetch(url, {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                RequestVerificationToken:
-                                    document.getElementById("RequestVerificationToken").value,
-                                'Authorization': 'Bearer ' + window.logged
-                            },
-                            body: JSON.stringify(jsonRecipe)
-                        })
-                            .then(res => { return res })
-                        if (response.ok)
-                            return true;
-                        else
-                            return false;
-                    }
-                    function adjust(chosenRecipe, editIng, editIns) {
-                        editIng = editIng.trim();
-                        editIns = editIns.trim();
-                        let ing = editIng;
-                        let ins = editIns;
-                        chosenRecipe.Id = chosenRecipe.id;
-                        chosenRecipe.Ingredients = ing.split('\n');
-                        chosenRecipe.Instructions = ins.split('\n');
-                        chosenRecipe.Title = chosenRecipe.title;
-                        chosenRecipe.Categories = chosenRecipe.categories;
-                        chosenRecipe.ingredients = ing.split('\n');
-                        chosenRecipe.instructions = ins.split('\n');
-                        return chosenRecipe;
-                    }
-                    function adjustEdit(recipe, ing, ins) {
-                        let i;
-                        ing = '';
-                        ins = '';
-                        for (i = 0; i < recipe.ingredients.length; i++) {
-                            recipe.ingredients[i] = recipe.ingredients[i].replaceAll('\n', '');
-                        }
-                        for (i = 0; i < recipe.instructions.length; i++) {
-                            recipe.instructions[i] = recipe.instructions[i].replaceAll('\n', '');
-                        }
-                        for (i = 0; i < recipe.ingredients.length; i++) {
-                            ing = ing + recipe.ingredients[i] + '\n';
-                        }
-                        for (i = 0; i < recipe.instructions.length; i++) {
-                            ins = ins + recipe.instructions[i] + '\n';
-                        }
-                        for (i = 0; i < recipe.ingredients.length; i++) {
-                            recipe.ingredients[i] = recipe.ingredients[i] + '\n';
-                        }
-                        for (i = 0; i < recipe.instructions.length; i++) {
-                            recipe.instructions[i] = recipe.instructions[i] + '\n';
-                        }
-                        return [recipe, ing, ins];
-                    }
-                </script>
+                </div>
             </div>
+            <script>
+                async function updateRecipe(jsonRecipe, id) {
+                    jsonRecipe = {
+                        'Id': jsonRecipe.Id,
+                        'Title': jsonRecipe.Title,
+                        'Ingredients': jsonRecipe.Ingredients,
+                        'Instructions': jsonRecipe.Instructions,
+                        'Categories': jsonRecipe.Categories
+                    }
+                    let url = '@baseAdress' + 'update-recipe/' + id;
+                    const response = await fetch(url, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            RequestVerificationToken:
+                                document.getElementById("RequestVerificationToken").value,
+                            'Authorization': 'Bearer ' + window.logged
+                        },
+                        body: JSON.stringify(jsonRecipe)
+                    })
+                        .then(res => { return res })
+                    if (response.ok) {
+                        scroll('recipe');
+                        return true;
+                    }
+                    else
+                        return false;
+                }
+                function adjust(chosenRecipe, editIng, editIns) {
+                    editIng = editIng.trim();
+                    editIns = editIns.trim();
+                    let ing = editIng;
+                    let ins = editIns;
+                    chosenRecipe.Id = chosenRecipe.id;
+                    chosenRecipe.Ingredients = ing.split('\n');
+                    chosenRecipe.Instructions = ins.split('\n');
+                    chosenRecipe.Title = chosenRecipe.title;
+                    chosenRecipe.Categories = chosenRecipe.categories;
+                    chosenRecipe.ingredients = ing.split('\n');
+                    chosenRecipe.instructions = ins.split('\n');
+                    return chosenRecipe;
+                }
+                function adjustEdit(recipe, ing, ins) {
+                    let i;
+                    ing = '';
+                    ins = '';
+                    for (i = 0; i < recipe.ingredients.length; i++) {
+                        recipe.ingredients[i] = recipe.ingredients[i].replaceAll('\n', '');
+                    }
+                    for (i = 0; i < recipe.instructions.length; i++) {
+                        recipe.instructions[i] = recipe.instructions[i].replaceAll('\n', '');
+                    }
+                    for (i = 0; i < recipe.ingredients.length; i++) {
+                        ing = ing + recipe.ingredients[i] + '\n';
+                    }
+                    for (i = 0; i < recipe.instructions.length; i++) {
+                        ins = ins + recipe.instructions[i] + '\n';
+                    }
+                    for (i = 0; i < recipe.ingredients.length; i++) {
+                        recipe.ingredients[i] = recipe.ingredients[i] + '\n';
+                    }
+                    for (i = 0; i < recipe.instructions.length; i++) {
+                        recipe.instructions[i] = recipe.instructions[i] + '\n';
+                    }
+                    return [recipe, ing, ins];
+                }
+            </script>
         </div>
     </div>
 </div>
@@ -822,5 +901,21 @@
         }
         else
             return false;
+    }
+    async function getToken() {
+        const response = await fetch('@baseAdress' + 'antiforgery', {
+            method: "GET",
+            credentials: 'include'
+        });
+        if (response.ok) {
+            const xsrfToken = document.cookie
+                .split("; ")
+                .find(row => row.startsWith("XSRF-TOKEN="))
+                .split("=")[1];
+            return xsrfToken;
+        }
+        else {
+            return null;
+        }
     }
 </script>
