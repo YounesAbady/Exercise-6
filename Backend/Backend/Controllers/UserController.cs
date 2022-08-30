@@ -17,14 +17,10 @@ namespace Backend.Controllers
         private static bool s_isLoaded = false;
         private static List<User> s_users = new List<User>();
         private readonly IConfiguration _configuration;
-        private readonly IAntiforgery _antiforgery;
-        public static IAntiforgery GlobalAntiforgery;
 
         public UserController(IConfiguration config, IAntiforgery antiforgery)
         {
             _configuration = config;
-            _antiforgery = antiforgery;
-            GlobalAntiforgery = antiforgery;
         }
 
         [HttpPost]
@@ -59,9 +55,64 @@ namespace Backend.Controllers
         [Route("api/login")]
         public async Task<ActionResult> Login([FromBody] UserDto user)
         {
+            if (!s_isLoaded)
+            {
+                await LoadData();
+            }
+            User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
+            if (loggedUser == null)
+                return BadRequest("User not found!");
+            if (VerifyPassword(user.Password, loggedUser.PasswordHash, loggedUser.PasswordSalt))
+            {
+                string token = CreateToken(loggedUser);
+                var refreshToken = CreateRefreshToken();
+                SetRefreshToken(refreshToken, loggedUser.Id);
+                await SaveData();
+                return Ok(token);
+            }
+            else
+                return BadRequest("Wrong password!");
+        }
+
+        [HttpPost]
+        [Route("api/refresh-token/{id}"), Authorize]
+        public async Task<ActionResult<string>> RefreshToken([FromBody] string rT, Guid id)
+        {
             try
             {
-                await _antiforgery.ValidateRequestAsync(HttpContext);
+                await RecipeController.GlobalAntiforgery.ValidateRequestAsync(HttpContext);
+                if (!s_isLoaded)
+                {
+                    await LoadData();
+                }
+                var refreshToken = rT;
+                User loggedUser = s_users.FirstOrDefault(user => user.Id == id);
+                if (!loggedUser.RefreshToken.Equals(refreshToken))
+                    return Unauthorized("Invalid refresh token");
+                else if (loggedUser.TimeExpires < DateTime.Now)
+                    return Unauthorized("Token expired");
+                else
+                {
+                    string token = CreateToken(loggedUser);
+                    var newRT = CreateRefreshToken();
+                    SetRefreshToken(newRT, loggedUser.Id);
+                    await SaveData();
+                    return Ok(token);
+                }
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+        }
+
+        [HttpPost]
+        [Route("api/get-rt"), Authorize]
+        public async Task<ActionResult<RefreshToken>> GetRefreshToken([FromBody] UserDto user)
+        {
+            try
+            {
+                await RecipeController.GlobalAntiforgery.ValidateRequestAsync(HttpContext);
                 if (!s_isLoaded)
                 {
                     await LoadData();
@@ -71,89 +122,42 @@ namespace Backend.Controllers
                     return BadRequest("User not found!");
                 if (VerifyPassword(user.Password, loggedUser.PasswordHash, loggedUser.PasswordSalt))
                 {
-                    string token = CreateToken(loggedUser);
-                    var refreshToken = CreateRefreshToken();
-                    SetRefreshToken(refreshToken, loggedUser.Id);
-                    await SaveData();
-                    return Ok(token);
+                    return Ok(loggedUser.RefreshToken);
                 }
                 else
-                    return BadRequest("Wrong password!");
+                    return BadRequest("Invalid user data!");
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(e.Message);
             }
         }
 
         [HttpPost]
-        [Route("api/refresh-token/{id}"), AllowAnonymous]
-        public async Task<ActionResult<string>> RefreshToken([FromBody] string rT, Guid id)
-        {
-            if (!s_isLoaded)
-            {
-                await LoadData();
-            }
-            var refreshToken = rT;
-            User loggedUser = s_users.FirstOrDefault(user => user.Id == id);
-            if (!loggedUser.RefreshToken.Equals(refreshToken))
-                return Unauthorized("Invalid refresh token");
-            else if (loggedUser.TimeExpires < DateTime.Now)
-                return Unauthorized("Token expired");
-            else
-            {
-                string token = CreateToken(loggedUser);
-                var newRT = CreateRefreshToken();
-                SetRefreshToken(newRT, loggedUser.Id);
-                await SaveData();
-                return Ok(token);
-            }
-        }
-
-        [HttpPost]
-        [Route("api/get-rt")]
-        public async Task<ActionResult<RefreshToken>> GetRefreshToken([FromBody] UserDto user)
-        {
-            if (!s_isLoaded)
-            {
-                await LoadData();
-            }
-            User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
-            if (loggedUser == null)
-                return BadRequest("User not found!");
-            if (VerifyPassword(user.Password, loggedUser.PasswordHash, loggedUser.PasswordSalt))
-            {
-                return Ok(loggedUser.RefreshToken);
-            }
-            else
-                return BadRequest("Invalid user data!");
-        }
-
-        [HttpPost]
-        [Route("api/get-id")]
+        [Route("api/get-id"), Authorize]
         public async Task<ActionResult<RefreshToken>> GetUserId([FromBody] UserDto user)
         {
-            if (!s_isLoaded)
+            try
             {
-                await LoadData();
+                await RecipeController.GlobalAntiforgery.ValidateRequestAsync(HttpContext);
+                if (!s_isLoaded)
+                {
+                    await LoadData();
+                }
+                User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
+                if (loggedUser == null)
+                    return BadRequest("User not found!");
+                if (VerifyPassword(user.Password, loggedUser.PasswordHash, loggedUser.PasswordSalt))
+                {
+                    return Ok(loggedUser.Id);
+                }
+                else
+                    return BadRequest("Invalid user data!");
             }
-            User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
-            if (loggedUser == null)
-                return BadRequest("User not found!");
-            if (VerifyPassword(user.Password, loggedUser.PasswordHash, loggedUser.PasswordSalt))
+            catch (Exception e)
             {
-                return Ok(loggedUser.Id);
+                return BadRequest(e.Message);
             }
-            else
-                return BadRequest("Invalid user data!");
-        }
-
-        [HttpGet]
-        [Route("api/antiforgery")]
-        public void GetAntiforgery()
-        {
-            var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
-            HttpContext.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!, new CookieOptions { HttpOnly = false });
         }
 
         private RefreshToken CreateRefreshToken()
@@ -250,7 +254,7 @@ namespace Backend.Controllers
             var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
             var token = new JwtSecurityToken(
                 claims: claims,
-                expires: DateTime.Now.AddMinutes(2),
+                expires: DateTime.Now.AddMinutes(3),
                 signingCredentials: cred,
                 issuer: "Younes Abady",
                 audience: "https://localhost:7024/"

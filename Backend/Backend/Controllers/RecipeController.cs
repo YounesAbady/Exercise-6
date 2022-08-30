@@ -11,46 +11,76 @@ namespace Backend.Controllers
         private static bool s_isLoaded = false;
         private static List<Recipe> s_recipes { get; set; } = new List<Recipe>();
         private static List<string> s_categoriesNames { get; set; } = new List<string>();
+        private readonly IAntiforgery _antiforgery;
+        public static IAntiforgery GlobalAntiforgery;
+        public RecipeController(IAntiforgery antiforgery)
+        {
+            _antiforgery = antiforgery;
+        }
 
         [HttpGet]
         [Route("api/list-recipes"), Authorize]
         public async Task<ActionResult<Recipe>> ListRecipes()
         {
-            if (!s_isLoaded)
+            try
             {
-                await LoadData();
+                await GlobalAntiforgery.ValidateRequestAsync(HttpContext);
+                if (!s_isLoaded)
+                {
+                    await LoadData();
+                }
+                if (s_recipes.Count == 0)
+                    throw new InvalidOperationException("Cant be empty");
+                else
+                    return Ok(s_recipes);
             }
-            if (s_recipes.Count == 0)
-                throw new InvalidOperationException("Cant be empty");
-            else
-                return Ok(s_recipes);
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
         }
 
         [HttpGet]
         [Route("api/list-categories"), Authorize]
-        public async Task<List<string>> ListCategories()
+        public async Task<ActionResult<string>> ListCategories()
         {
-            if (!s_isLoaded)
+            try
             {
-                await LoadData();
+                await GlobalAntiforgery.ValidateRequestAsync(HttpContext);
+                if (!s_isLoaded)
+                {
+                    await LoadData();
+                }
+                if (s_categoriesNames.Count == 0)
+                    throw new InvalidOperationException("Cant be empty");
+                else
+                    return Ok(s_categoriesNames);
             }
-            if (s_categoriesNames.Count == 0)
-                throw new InvalidOperationException("Cant be empty");
-            else
-                return s_categoriesNames;
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
         }
 
         [HttpPost]
         [Route("api/add-category"), Authorize]
         public async Task<ActionResult> AddCategory([FromBody] string category)
         {
-            if (string.IsNullOrEmpty(category))
-                return BadRequest("Cant be empty");
-            else
+            try
             {
-                s_categoriesNames.Add(category);
-                await SaveCategories();
-                return Ok();
+                await GlobalAntiforgery.ValidateRequestAsync(HttpContext);
+                if (string.IsNullOrEmpty(category))
+                    return BadRequest("Cant be empty");
+                else
+                {
+                    s_categoriesNames.Add(category);
+                    await SaveCategories();
+                    return Ok();
+                }
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
             }
         }
 
@@ -58,123 +88,184 @@ namespace Backend.Controllers
         [Route("api/add-recipe"), Authorize]
         public async Task<ActionResult> AddRecipe([FromBody] Recipe recipe)
         {
-            recipe.Ingredients = recipe.Ingredients.Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
-            recipe.Instructions = recipe.Instructions.Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
-            if (recipe.Ingredients.Count == 0 || recipe.Instructions.Count == 0 || recipe.Categories.Count == 0 || string.IsNullOrWhiteSpace(recipe.Title))
-                return BadRequest("Cant be empty");
-            else
+            try
             {
-                s_recipes.Add(recipe);
-                await SaveRecipes();
-                return Ok();
+                await GlobalAntiforgery.ValidateRequestAsync(HttpContext);
+                recipe.Ingredients = recipe.Ingredients.Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
+                recipe.Instructions = recipe.Instructions.Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
+                if (recipe.Ingredients.Count == 0 || recipe.Instructions.Count == 0 || recipe.Categories.Count == 0 || string.IsNullOrWhiteSpace(recipe.Title))
+                    return BadRequest("Cant be empty");
+                else
+                {
+                    s_recipes.Add(recipe);
+                    await SaveRecipes();
+                    return Ok();
+                }
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
             }
         }
 
         [HttpDelete]
         [Route("api/delete-category"), Authorize]
-        public async void DeleteCategory([FromBody] string category)
+        public async Task<ActionResult> DeleteCategory([FromBody] string category)
         {
-            if (string.IsNullOrEmpty(category))
-                throw new InvalidOperationException("Cant be empty");
-            else
+            try
             {
-                if (!s_isLoaded)
+                await GlobalAntiforgery.ValidateRequestAsync(HttpContext);
+                if (string.IsNullOrEmpty(category))
+                    throw new InvalidOperationException("Cant be empty");
+                else
                 {
-                    await LoadData();
+                    if (!s_isLoaded)
+                    {
+                        await LoadData();
+                    }
+                    s_categoriesNames.Remove(category);
+                    foreach (Recipe recipe in s_recipes)
+                    {
+                        if (recipe.Categories.Contains(category))
+                            recipe.Categories.Remove(category);
+                    }
+                    await SaveCategories();
+                    await SaveRecipes();
+                    return Ok();
                 }
-                s_categoriesNames.Remove(category);
-                foreach (Recipe recipe in s_recipes)
-                {
-                    if (recipe.Categories.Contains(category))
-                        recipe.Categories.Remove(category);
-                }
-                await SaveCategories();
-                await SaveRecipes();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
             }
         }
 
         [HttpPut]
         [Route("api/update-category/{position}"), Authorize]
-        public async void UpdateCategory(string position, [FromBody] string newCategory)
+        public async Task<ActionResult> UpdateCategory(string position, [FromBody] string newCategory)
         {
-            if (string.IsNullOrEmpty(newCategory))
-                throw new InvalidOperationException("Cant be empty");
-            else
+            try
             {
-                if (!s_isLoaded)
+                await GlobalAntiforgery.ValidateRequestAsync(HttpContext);
+                if (string.IsNullOrEmpty(newCategory))
+                    throw new InvalidOperationException("Cant be empty");
+                else
                 {
-                    await LoadData();
-                }
-                foreach (Recipe recipe in s_recipes)
-                {
-                    if (recipe.Categories.Contains(s_categoriesNames[int.Parse(position) - 1]))
+                    if (!s_isLoaded)
                     {
-                        recipe.Categories[recipe.Categories.IndexOf(s_categoriesNames[int.Parse(position) - 1])] = newCategory;
+                        await LoadData();
                     }
+                    foreach (Recipe recipe in s_recipes)
+                    {
+                        if (recipe.Categories.Contains(s_categoriesNames[int.Parse(position) - 1]))
+                        {
+                            recipe.Categories[recipe.Categories.IndexOf(s_categoriesNames[int.Parse(position) - 1])] = newCategory;
+                        }
+                    }
+                    s_categoriesNames[int.Parse(position) - 1] = newCategory;
+                    await SaveCategories();
+                    await SaveRecipes();
+                    return Ok();
                 }
-                s_categoriesNames[int.Parse(position) - 1] = newCategory;
-                await SaveCategories();
-                await SaveRecipes();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
             }
         }
 
         [HttpDelete]
         [Route("api/delete-recipe"), Authorize]
-        public async void DeleteRecipe([FromBody] Guid id)
+        public async Task<ActionResult> DeleteRecipe([FromBody] Guid id)
         {
-            if (id == Guid.Empty)
-                throw new InvalidOperationException("Cant be empty");
-            else
+            try
             {
-                if (!s_isLoaded)
+                await GlobalAntiforgery.ValidateRequestAsync(HttpContext);
+                if (id == Guid.Empty)
+                    throw new InvalidOperationException("Cant be empty");
+                else
                 {
-                    await LoadData();
+                    if (!s_isLoaded)
+                    {
+                        await LoadData();
+                    }
+                    Recipe recipe = s_recipes.FirstOrDefault(x => x.Id == id);
+                    s_recipes.Remove(recipe);
+                    await SaveRecipes();
+                    return Ok();
                 }
-                Recipe recipe = s_recipes.FirstOrDefault(x => x.Id == id);
-                s_recipes.Remove(recipe);
-                await SaveRecipes();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
             }
         }
 
         [HttpPut]
         [Route("api/update-recipe/{id}"), Authorize]
-        public async void UpdateRecipe([FromBody] Recipe newRecipe, Guid id)
+        public async Task<ActionResult> UpdateRecipe([FromBody] Recipe newRecipe, Guid id)
         {
-            if (id == Guid.Empty || newRecipe.Ingredients.Count == 0 || newRecipe.Instructions.Count == 0 || newRecipe.Categories.Count == 0 || string.IsNullOrWhiteSpace(newRecipe.Title))
-                throw new InvalidOperationException("Cant be empty");
-            else
+            try
             {
-                Recipe oldRecipe = s_recipes.FirstOrDefault(x => x.Id == id);
-                newRecipe.Ingredients = newRecipe.Ingredients.Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
-                newRecipe.Instructions = newRecipe.Instructions.Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
-                if (newRecipe.Ingredients.Count == 0 || newRecipe.Instructions.Count == 0 || newRecipe.Categories.Count == 0 || string.IsNullOrWhiteSpace(newRecipe.Title))
+                await GlobalAntiforgery.ValidateRequestAsync(HttpContext);
+                if (id == Guid.Empty || newRecipe.Ingredients.Count == 0 || newRecipe.Instructions.Count == 0 || newRecipe.Categories.Count == 0 || string.IsNullOrWhiteSpace(newRecipe.Title))
                     throw new InvalidOperationException("Cant be empty");
                 else
                 {
-                    oldRecipe.Title = newRecipe.Title;
-                    oldRecipe.Categories = newRecipe.Categories;
-                    oldRecipe.Ingredients = newRecipe.Ingredients;
-                    oldRecipe.Instructions = newRecipe.Instructions;
-                    await SaveRecipes();
+                    Recipe oldRecipe = s_recipes.FirstOrDefault(x => x.Id == id);
+                    newRecipe.Ingredients = newRecipe.Ingredients.Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
+                    newRecipe.Instructions = newRecipe.Instructions.Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
+                    if (newRecipe.Ingredients.Count == 0 || newRecipe.Instructions.Count == 0 || newRecipe.Categories.Count == 0 || string.IsNullOrWhiteSpace(newRecipe.Title))
+                        throw new InvalidOperationException("Cant be empty");
+                    else
+                    {
+                        oldRecipe.Title = newRecipe.Title;
+                        oldRecipe.Categories = newRecipe.Categories;
+                        oldRecipe.Ingredients = newRecipe.Ingredients;
+                        oldRecipe.Instructions = newRecipe.Instructions;
+                        await SaveRecipes();
+                        return Ok();
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
             }
         }
 
         [HttpGet]
         [Route("api/get-recipe/{id}"), Authorize]
-        public async Task<Recipe> GetRecipe(Guid id)
+        public async Task<ActionResult<Recipe>> GetRecipe(Guid id)
         {
-            if (!s_isLoaded)
+            try
             {
-                await LoadData();
+                await GlobalAntiforgery.ValidateRequestAsync(HttpContext);
+                if (!s_isLoaded)
+                {
+                    await LoadData();
+                }
+                if (id == Guid.Empty)
+                    throw new InvalidOperationException("Cant be empty");
+                else
+                {
+                    var recipe = s_recipes.FirstOrDefault(x => x.Id == id);
+                    return Ok(recipe);
+                }
             }
-            if (id == Guid.Empty)
-                throw new InvalidOperationException("Cant be empty");
-            else
+            catch (Exception e)
             {
-                var recipe = s_recipes.FirstOrDefault(x => x.Id == id);
-                return recipe;
+                return BadRequest(e.Message);
             }
+        }
+
+        [HttpGet]
+        [Route("api/antiforgery"), Authorize]
+        public void GetAntiforgery()
+        {
+            GlobalAntiforgery = _antiforgery;
+            var tokens = GlobalAntiforgery.GetAndStoreTokens(HttpContext);
+            HttpContext.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!, new CookieOptions { HttpOnly = false, SameSite = SameSiteMode.None, Secure = true });
         }
 
         public static string PathCombine(string path1, string path2)
