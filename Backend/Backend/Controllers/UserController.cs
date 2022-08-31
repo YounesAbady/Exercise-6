@@ -1,6 +1,7 @@
 ﻿using Backend.Models;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
@@ -42,9 +43,8 @@ namespace Backend.Controllers
             {
                 user = new User();
                 user.Name = newUser.Username;
-                CreatePasswordHash(newUser.Password, out byte[] passwordHash, out byte[] passwordSalt);
-                user.PasswordHash = passwordHash;
-                user.PasswordSalt = passwordSalt;
+                var hasher = new PasswordHasher<User>();
+                user.PasswordHash = hasher.HashPassword(user, newUser.Password);
                 s_users.Add(user);
                 await SaveData();
                 return Ok();
@@ -60,9 +60,10 @@ namespace Backend.Controllers
                 await LoadData();
             }
             User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
+            var hasher = new PasswordHasher<User>();
             if (loggedUser == null)
                 return BadRequest("User not found!");
-            if (VerifyPassword(user.Password, loggedUser.PasswordHash, loggedUser.PasswordSalt))
+            if (hasher.VerifyHashedPassword(loggedUser, loggedUser.PasswordHash, user.Password).Equals(PasswordVerificationResult.Success))
             {
                 string token = CreateToken(loggedUser);
                 var refreshToken = CreateRefreshToken();
@@ -117,10 +118,11 @@ namespace Backend.Controllers
                 {
                     await LoadData();
                 }
+                var hasher = new PasswordHasher<User>();
                 User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
                 if (loggedUser == null)
                     return BadRequest("User not found!");
-                if (VerifyPassword(user.Password, loggedUser.PasswordHash, loggedUser.PasswordSalt))
+                if (hasher.VerifyHashedPassword(loggedUser, loggedUser.PasswordHash, user.Password).Equals(PasswordVerificationResult.Success))
                 {
                     return Ok(loggedUser.RefreshToken);
                 }
@@ -144,10 +146,11 @@ namespace Backend.Controllers
                 {
                     await LoadData();
                 }
+                var hasher = new PasswordHasher<User>();
                 User loggedUser = s_users.SingleOrDefault(x => x.Name == user.Username);
                 if (loggedUser == null)
                     return BadRequest("User not found!");
-                if (VerifyPassword(user.Password, loggedUser.PasswordHash, loggedUser.PasswordSalt))
+                if (hasher.VerifyHashedPassword(loggedUser, loggedUser.PasswordHash, user.Password).Equals(PasswordVerificationResult.Success))
                 {
                     return Ok(loggedUser.Id);
                 }
@@ -187,24 +190,6 @@ namespace Backend.Controllers
             loggedUser.TimeCreated = newRT.TimeCreated;
             loggedUser.TimeExpires = newRT.TimeExpires;
             await SaveData();
-        }
-
-        private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
-        {
-            using (var hmac = new HMACSHA512())
-            {
-                passwordSalt = hmac.Key;
-                passwordHash = hmac.ComputeHash(ASCIIEncoding.UTF8.GetBytes(password));
-            }
-        }
-
-        private bool VerifyPassword(string password, byte[] passwordHash, byte[] passwordSalt)
-        {
-            using (var hmac = new HMACSHA512(passwordSalt))
-            {
-                var computedHash = hmac.ComputeHash(ASCIIEncoding.UTF8.GetBytes(password));
-                return computedHash.SequenceEqual(passwordHash);
-            }
         }
 
         private async Task LoadData()
